@@ -4,7 +4,7 @@
 
 # OQ-SRTK - OpenQuake Site Response Toolkit
 
-A Site Characterisation and Seismic Response Analysis Toolkit for Python
+The OpenQuake toolkit for site characterisation and seismic response analysis in Python
 
 Current features:
 
