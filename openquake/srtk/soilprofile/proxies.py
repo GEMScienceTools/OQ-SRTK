@@ -31,7 +31,7 @@ import scipy.optimize as _spo
 
 # =============================================================================
 
-def depth_weighted_average(thickness, soil_prop, depth):
+def depth_weighted_average(thickness, soil_param, depth):
     """
     Compute the weighted average of a soil property at
     arbitrary depth.
@@ -39,32 +39,32 @@ def depth_weighted_average(thickness, soil_prop, depth):
     :param numpy.array tickness:
         array of layer's thicknesses in meters (half-space is 0.)
 
-    :param numpy.array soil_prop:
+    :param numpy.array soil_param:
         array of soil properties (e.g. slowness, density)
 
     :param float depth:
         averaging depth in meters
 
-    :return float mean_value:
+    :return float mean_param:
         the weighted mean of the given soil property
     """
 
-    mean_value = 0
+    mean_param = 0
     total_depth = 0
 
-    for tk, sp in zip(thickness[:-1], soil_prop[:-1]):
+    for tk, sp in zip(thickness[:-1], soil_param[:-1]):
         if (tk + total_depth) < depth:
-            mean_value += tk*sp/depth
+            mean_param += tk*sp/depth
         else:
-            mean_value += (depth - total_depth)*sp/depth
+            mean_param += (depth - total_depth)*sp/depth
             break
         total_depth += tk
 
     # Check for the half-space
     if total_depth == _np.sum(thickness[:-1]):
-        mean_value += (depth - total_depth)*soil_prop[-1]/depth
+        mean_param += (depth - total_depth)*soil_param[-1]/depth
 
-    return mean_value
+    return mean_param
 
 
 # =============================================================================
@@ -84,7 +84,7 @@ def traveltime_average_velocity(thickness, s_velocity, depth=30):
         averaging depth in meters; if depth is not specified,
         depth is fixed to 30m
 
-    :return float average_velocity:
+    :return float mean_velocity:
         the average velocity in m/s
     """
 
@@ -92,12 +92,12 @@ def traveltime_average_velocity(thickness, s_velocity, depth=30):
     slowness = 1./s_velocity
 
     # Harmonic averaging is done in slowness
-    average_slowness = depth_weighted_average(thickness, slowness, depth)
+    mean_slowness = depth_weighted_average(thickness, slowness, depth)
 
     # Back to velocity
-    average_velocity = 1./average_slowness
+    mean_velocity = 1./mean_slowness
 
-    return average_velocity
+    return mean_velocity
 
 
 # =============================================================================
@@ -135,3 +135,67 @@ def compute_site_kappa(thickness, s_velocity, s_quality, depth=[]):
     kappa0 = depth_weighted_average(thickness, layer_kappa, depth)
 
     return kappa0
+
+# =============================================================================
+
+def quarter_wavelength_velocity(thickness, s_velocity, frequency):
+    """
+    This function solves the quarter-wavelength problem (Boore 2003)
+    and return the frequency-dependent average velocity.
+
+    :param numpy.array tickness:
+        array of layer's thicknesses in meters (half-space is 0.)
+
+    :param numpy.array s_velocity:
+        array of layer's shear-wave velocities in m/s
+
+    :param numpy.array frequency:
+        array of frequencies in Hz for the calculation
+
+    :return numpy.array qwl_depth:
+        array of averaging depths
+
+    :return numpy.array qwl_velocity:
+        array of quarter-wavelength average velocities
+    """
+
+    # Initialisation
+    freq_num = len(frequency)
+    slowness = 1./s_velocity
+    qwl_depth = _np.zeros(freq_num)
+    qwl_velocity = _np.zeros(freq_num)
+
+    for nf in range(freq_num):
+
+        # Upper depth bound for the search
+        ubnd = _np.max(1./(4.*frequency[nf]*slowness))
+
+        # Input arguments for the search function
+        args = (thickness, slowness, frequency[nf])
+
+        # Compute the quarter-wavelength depth
+        qwl_depth[nf] = _spo.fminbound(_qwl_fit_func, 0., ubnd, args)
+
+        # Computing average soil property at the qwl-depth
+        qwl_velocity[nf] = 1./depth_weighted_average(thickness,
+                                                     slowness,
+                                                     qwl_depth[nf])
+
+    return qwl_depth, qwl_velocity
+
+
+# =============================================================================
+
+def _qwl_fit_func(search_depth, thickness, slowness, frequency):
+    """
+    Internal function to recursively search for the qwl depth.
+    """
+
+    qwl_slowness = depth_weighted_average(thickness,
+                                          slowness,
+                                          search_depth)
+
+    # Misfit is computed as a simple L1 norm
+    misfit = _np.abs(search_depth - (1./(4.*frequency*qwl_slowness)))
+
+    return misfit

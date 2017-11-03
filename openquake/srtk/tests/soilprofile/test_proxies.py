@@ -33,13 +33,13 @@ class DepthAverageTestCase(unittest.TestCase):
 
     def check_average(self,
                       thickness,
-                      soil_prop,
+                      soil_param,
                       depth,
                       expected_result,
                       tolerance=0.):
 
         average = proxies.depth_weighted_average(thickness,
-                                                 soil_prop,
+                                                 soil_param,
                                                  depth)
         self.assertAlmostEqual(average,
                                expected_result,
