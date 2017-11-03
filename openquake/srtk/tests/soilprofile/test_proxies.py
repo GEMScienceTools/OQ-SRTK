@@ -179,3 +179,45 @@ class SiteKappaTestCase(unittest.TestCase):
                           100.,
                           0.01539,
                           tolerance=0.00001)
+
+
+# =============================================================================
+
+class QuarterWavelengthTestCase(unittest.TestCase):
+
+    def check_qwl_velocity(self,
+                           thickness,
+                           s_velocity,
+                           frequency,
+                           expected_result,
+                           tolerance=0.):
+
+        qwl_param = proxies.quarter_wavelength_velocity(thickness,
+                                                        s_velocity,
+                                                        frequency)
+
+        for np in [0, 1]:
+            for qp, er in zip(qwl_param[np], expected_result[np]):
+                self.assertAlmostEqual(qp, er, delta=tolerance)
+
+    def test_three_layers(self):
+        """
+        Testing the frequency range 0.1-100Hz
+        """
+
+        expected_result = [[2.36000001e+03,
+                            3.60000002e+02,
+                            1.10000002e+02,
+                            2.49999899e+00,
+                            2.50000737e-01],
+                           [944.00000015,
+                            720.00000115,
+                            440.00000477,
+                            100.,
+                            100.]]
+
+        self.check_qwl_velocity(np.array([10., 50., 0.]),
+                                np.array([100., 500., 1000.]),
+                                np.array([0.1, 0.5, 1., 10., 100.]),
+                                expected_result,
+                                tolerance=0.00001)
