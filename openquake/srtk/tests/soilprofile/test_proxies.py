@@ -99,6 +99,46 @@ class DepthAverageTestCase(unittest.TestCase):
 
 # =============================================================================
 
+class TravelTimeAverageTestCase(unittest.TestCase):
+
+    def check_average(self,
+                      thickness,
+                      s_velocity,
+                      depth,
+                      expected_result,
+                      tolerance=0.):
+
+        average = proxies.traveltime_average_velocity(thickness,
+                                                      s_velocity,
+                                                      depth)
+        self.assertAlmostEqual(average,
+                               expected_result,
+                               delta=tolerance)
+
+    def test_one_layer(self):
+        """
+        Case with only one layer (homogenous half space)
+        """
+
+        self.check_average(np.array([0]),
+                           np.array([200.]),
+                           50.,
+                           200.)
+
+    def test_three_layer_vs30(self):
+        """
+        Case with only one layer (homogenous half space)
+        """
+
+        self.check_average(np.array([5., 10., 10., 20., 0.]),
+                           np.array([200., 300., 350., 650., 1200.]),
+                           30.,
+                           317.13,
+                           tolerance=0.01)
+
+
+# =============================================================================
+
 class SiteKappaTestCase(unittest.TestCase):
 
     def check_kappa0(self,
@@ -109,11 +149,11 @@ class SiteKappaTestCase(unittest.TestCase):
                      expected_result,
                      tolerance=0.):
 
-        average = proxies.compute_site_kappa(thickness,
-                                             s_velocity,
-                                             s_quality,
-                                             depth)
-        self.assertAlmostEqual(average,
+        kappa0 = proxies.compute_site_kappa(thickness,
+                                            s_velocity,
+                                            s_quality,
+                                            depth)
+        self.assertAlmostEqual(kappa0,
                                expected_result,
                                delta=tolerance)
 

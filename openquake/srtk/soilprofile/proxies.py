@@ -60,6 +60,7 @@ def depth_weighted_average(thickness, soil_prop, depth):
             break
         total_depth += tk
 
+    # Check for the half-space
     if total_depth == _np.sum(thickness[:-1]):
         mean_value += (depth - total_depth)*soil_prop[-1]/depth
 
@@ -68,10 +69,43 @@ def depth_weighted_average(thickness, soil_prop, depth):
 
 # =============================================================================
 
+def traveltime_average_velocity(thickness, s_velocity, depth=30):
+    """
+    The function calculates the travel-time average (harmonic mean)
+    velocity at arbitrary depth (e.g. the widespread Vs30).
+
+    :param numpy.array tickness:
+        array of layer's thicknesses in meters (half-space is 0.)
+
+    :param numpy.array s_velocity:
+        array of layer's shear-wave velocities in m/s
+
+    :param float depth:
+        averaging depth in meters; if depth is not specified,
+        depth is fixed to 30m
+
+    :return float average_velocity:
+        the average velocity in m/s
+    """
+
+    # Converting velocity to slowness
+    slowness = 1./s_velocity
+
+    # Harmonic averaging is done in slowness
+    average_slowness = depth_weighted_average(thickness, slowness, depth)
+
+    # Back to velocity
+    average_velocity = 1./average_slowness
+
+    return average_velocity
+
+
+# =============================================================================
+
 def compute_site_kappa(thickness, s_velocity, s_quality, depth=[]):
     """
     This function calucalte the site attenuation parameter Kappa(0)
-    for a given soil profile down to an arbitrary depth.
+    for a given soil profile at arbitrary depth.
 
     :param numpy.array tickness:
         array of layer's thicknesses in meters (half-space is 0.)
@@ -85,6 +119,9 @@ def compute_site_kappa(thickness, s_velocity, s_quality, depth=[]):
     :param float depth:
         averaging depth in meters; if depth is not specified,
         the last layer interface is used instead
+
+    :return float kappa0:
+        the site attenuation parameter kappa(0) in seconds
     """
 
     # If depth not given, using the whole profile
