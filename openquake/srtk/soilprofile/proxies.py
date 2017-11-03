@@ -65,6 +65,7 @@ def depth_weighted_average(thickness, soil_prop, depth):
 
     return mean_value
 
+
 # =============================================================================
 
 def compute_site_kappa(thickness, s_velocity, s_quality, depth=[]):
