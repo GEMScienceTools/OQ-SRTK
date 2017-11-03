@@ -136,6 +136,7 @@ def compute_site_kappa(thickness, s_velocity, s_quality, depth=[]):
 
     return kappa0
 
+
 # =============================================================================
 
 def quarter_wavelength_velocity(thickness, s_velocity, frequency):
