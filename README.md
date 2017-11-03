@@ -1,4 +1,4 @@
-<img alt="OQ-SRTK - The Seismic Site Response Toolkit" class="right" style="width: 60%" src="https://raw.githubusercontent.com/klunk386/SeismicSiteTool/master/Logo/OQ-SRTK-Logo.png" />
+<img alt="OQ-SRTK - The Seismic Site Response Toolkit of OpenQuake" class="right" style="width: 60%" src="https://raw.githubusercontent.com/klunk386/OQ-SiteResponseToolkit/master/logo/OQ-Logo.png" />
 
 [![AGPLv3](https://www.gnu.org/graphics/agplv3-88x31.png)](https://www.gnu.org/licenses/agpl.html)
 
