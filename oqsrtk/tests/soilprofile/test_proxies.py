@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-#
 # =============================================================================
 #
 # Copyright (C) 2010-2017 GEM Foundation
@@ -29,6 +26,8 @@ import numpy as np
 
 from oqsrtk.soilprofile import proxies
 
+
+# =============================================================================
 
 class DepthAverageTestCase(unittest.TestCase):
 
@@ -96,3 +95,47 @@ class DepthAverageTestCase(unittest.TestCase):
                            30.,
                            8.3333,
                            tolerance=0.001)
+
+
+# =============================================================================
+
+class SiteKappaTestCase(unittest.TestCase):
+
+    def check_kappa0(self,
+                     thickness,
+                     s_velocity,
+                     s_quality,
+                     depth,
+                     expected_result,
+                     tolerance=0.):
+
+        average = proxies.compute_site_kappa(thickness,
+                                             s_velocity,
+                                             s_quality,
+                                             depth)
+        self.assertAlmostEqual(average,
+                               expected_result,
+                               delta=tolerance)
+
+    def test_one_layer(self):
+        """
+        Case with only one layer (homogenous half space)
+        """
+
+        self.check_kappa0(np.array([0]),
+                          np.array([100.]),
+                          np.array([10.]),
+                          50.,
+                          0.05)
+
+    def test_three_layers(self):
+        """
+        Case where the averaging depth is below the last layer
+        """
+
+        self.check_kappa0(np.array([10., 50., 0.]),
+                          np.array([100., 500., 1000.]),
+                          np.array([10., 20., 100.]),
+                          100.,
+                          0.01539,
+                          tolerance=0.00001)

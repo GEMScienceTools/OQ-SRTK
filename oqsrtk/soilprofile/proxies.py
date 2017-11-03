@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-#
 # =============================================================================
 #
 # Copyright (C) 2010-2017 GEM Foundation
@@ -40,13 +37,13 @@ def depth_weighted_average(thickness, soil_prop, depth):
     arbitrary depth.
 
     :param numpy.array tickness:
-        array of layer's thicknesses (half-space is 0)
+        array of layer's thicknesses in meters (half-space is 0.)
 
     :param numpy.array soil_prop:
         array of soil properties (e.g. slowness, density)
 
     :param float depth:
-        averaging depth
+        averaging depth in meters
 
     :return float mean_value:
         the weighted mean of the given soil property
@@ -67,3 +64,36 @@ def depth_weighted_average(thickness, soil_prop, depth):
         mean_value += (depth - total_depth)*soil_prop[-1]/depth
 
     return mean_value
+
+# =============================================================================
+
+def compute_site_kappa(thickness, s_velocity, s_quality, depth=[]):
+    """
+    This function calucalte the site attenuation parameter Kappa(0)
+    for a given soil profile down to an arbitrary depth.
+
+    :param numpy.array tickness:
+        array of layer's thicknesses in meters (half-space is 0.)
+
+    :param numpy.array s_velocity:
+        array of layer's shear-wave velocities in m/s
+
+    :param numpy.array s_quality:
+        array of layer's shear-wave quality factors (adimensional)
+
+    :param float depth:
+        averaging depth in meters; if depth is not specified,
+        the last layer interface is used instead
+    """
+
+    # If depth not given, using the whole profile
+    if not depth:
+        depth = _np.sum(thickness)
+
+    # Kappa vector
+    layer_kappa = depth/(s_velocity*s_quality)
+
+    # Computing the average kappa of the profile
+    kappa0 = depth_weighted_average(thickness, layer_kappa, depth)
+
+    return kappa0
