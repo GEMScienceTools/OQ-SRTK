@@ -23,14 +23,14 @@
 # Author: Valerio Poggi
 #
 # =============================================================================
-
 """
 The module contains several functions to derive and manipulate average
 soil parameters, such as travel-time average velocity and site kappa.
 """
 
-import numpy as __np
-import scipy.optimize as __spo
+import numpy as _np
+import scipy.optimize as _spo
+
 
 # =============================================================================
 
@@ -43,7 +43,7 @@ def depth_weighted_average(thickness, soil_prop, depth):
         array of layer's thicknesses (half-space is 0)
 
     :param numpy.array soil_prop:
-        array of soil properties (e.g. slowness, density) 
+        array of soil properties (e.g. slowness, density)
 
     :param float depth:
         averaging depth
@@ -63,7 +63,7 @@ def depth_weighted_average(thickness, soil_prop, depth):
             break
         total_depth += tk
 
-    if total_depth == __np.sum(thickness[:-1]):
+    if total_depth == _np.sum(thickness[:-1]):
         mean_value += (depth - total_depth)*soil_prop[-1]/depth
 
     return mean_value
