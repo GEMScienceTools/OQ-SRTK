@@ -24,7 +24,7 @@
 import unittest
 import numpy as np
 
-from oqsrtk.soilprofile import proxies
+from openquake.srtk.soilprofile import proxies
 
 
 # =============================================================================
