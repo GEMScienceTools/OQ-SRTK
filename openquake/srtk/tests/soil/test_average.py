@@ -24,7 +24,7 @@
 import unittest
 import numpy as np
 
-from openquake.srtk.soilprofile import proxies
+from openquake.srtk.soil import average
 
 
 # =============================================================================
@@ -38,10 +38,10 @@ class DepthAverageTestCase(unittest.TestCase):
                       expected_result,
                       tolerance=0.):
 
-        average = proxies.depth_weighted_average(thickness,
-                                                 soil_param,
-                                                 depth)
-        self.assertAlmostEqual(average,
+        computed_result = average.depth_weighted_average(thickness,
+                                                         soil_param,
+                                                         depth)
+        self.assertAlmostEqual(computed_result,
                                expected_result,
                                delta=tolerance)
 
@@ -108,10 +108,10 @@ class TravelTimeAverageTestCase(unittest.TestCase):
                       expected_result,
                       tolerance=0.):
 
-        average = proxies.traveltime_average_velocity(thickness,
-                                                      s_velocity,
-                                                      depth)
-        self.assertAlmostEqual(average,
+        computed_result = average.traveltime_average_velocity(thickness,
+                                                              s_velocity,
+                                                              depth)
+        self.assertAlmostEqual(computed_result,
                                expected_result,
                                delta=tolerance)
 
@@ -149,7 +149,7 @@ class SiteKappaTestCase(unittest.TestCase):
                      expected_result,
                      tolerance=0.):
 
-        kappa0 = proxies.compute_site_kappa(thickness,
+        kappa0 = average.compute_site_kappa(thickness,
                                             s_velocity,
                                             s_quality,
                                             depth)
@@ -192,7 +192,7 @@ class QuarterWavelengthTestCase(unittest.TestCase):
                            expected_result,
                            tolerance=0.):
 
-        qwl_param = proxies.quarter_wavelength_velocity(thickness,
+        qwl_param = average.quarter_wavelength_velocity(thickness,
                                                         s_velocity,
                                                         frequency)
 
