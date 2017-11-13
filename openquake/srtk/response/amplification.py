@@ -83,7 +83,7 @@ def impedance_amplification(top_vs, top_dn, ref_vs=[], ref_dn=[], inc_ang=0.):
 
 # =============================================================================
 
-def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0.):
+def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0., depth=None):
     """
     Compute the SH-wave transfer function using Knopoff formalism
     (implicit layer matrix scheme). Calculation can be done for an
@@ -104,6 +104,8 @@ def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0.):
     :param float or numpy.array freq:
 
     :param numpy.array freq:
+
+    :param float or numpy.array depth:
 
     """
 
@@ -169,8 +171,12 @@ def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0.):
     InpVec = _np.zeros(lnum*2, dtype=CTP)
     InpVec[-1] = 1.
 
-    # Ouput layer's displacement matrix
-    DisMat = _np.zeros((lnum, fnum), dtype=CTP)
+    # Output layer's displacement matrix
+    if depth is None:
+        DisMat = _np.zeros((lnum, fnum), dtype=CTP)
+    else:
+        DisMat = _np.zeros((len(depth), fnum), dtype=CTP)
+        hl_cum = _np.cumsum(hl)
 
     # -------------------------------------------------------------------------
     # Loop over frequencies
@@ -214,19 +220,46 @@ def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0.):
             AmpVec[:] = _np.nan
 
         # ---------------------------------------------------------------------
-        # Solving displacement at the interfaces
+        # Solving displacements:
 
-        # Displacement a the surface
-        DisMat[0, nf] = AmpVec[0] + AmpVec[1]
+        if depth is None:
+            # CASE 1) at the layer interfaces
+            # Note: interfaces can be calculated also using CASE 2
+            #       and it could be then removed
 
-        # Loop through layer interfaces
-        for nl in range(lnum-1):
-            expDSA = _np.exp(1j*angf[nf]*ns[nl]*hl[nl])
-            expUSA = _np.exp(-1j*angf[nf]*ns[nl]*hl[nl])
+            # Displacement a the surface
+            DisMat[0, nf] = AmpVec[0] + AmpVec[1]
 
-            disDSA = AmpVec[nl*2]*expDSA
-            disUSA = AmpVec[nl*2+1]*expUSA
+            # Loop through layer interfaces
+            for nl in range(lnum-1):
+                expDSA = _np.exp(1j*angf[nf]*ns[nl]*hl[nl])
+                expUSA = _np.exp(-1j*angf[nf]*ns[nl]*hl[nl])
 
-            DisMat[nl+1, nf] = disDSA + disUSA
+                disDSA = AmpVec[nl*2]*expDSA
+                disUSA = AmpVec[nl*2+1]*expUSA
+
+                DisMat[nl+1, nf] = disDSA + disUSA
+
+        else:
+            # CASE 2) at arbitrary depth
+            for nz in range(len(depth)):
+
+                if depth[nz] <= hl[0]:
+                    nl = 0
+                    dh = depth[nz]
+                elif depth[nz] > _np.max(hl_cum):
+                    nl = lnum-1
+                    dh = depth[nz] - _np.max(hl_cum)
+                else:
+                    nl = map(lambda x: x>=depth[nz], hl_cum).index(True)
+                    dh = depth[nz] - hl_cum[nl-1]
+
+                expDSA = _np.exp(1j*angf[nf]*ns[nl]*dh)
+                expUSA = _np.exp(-1j*angf[nf]*ns[nl]*dh)
+
+                disDSA = AmpVec[nl*2]*expDSA
+                disUSA = AmpVec[nl*2+1]*expUSA
+
+                DisMat[nz, nf] = disDSA + disUSA
 
     return DisMat
