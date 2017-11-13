@@ -83,7 +83,7 @@ def impedance_amplification(top_vs, top_dn, ref_vs=[], ref_dn=[], inc_ang=0.):
 
 # =============================================================================
 
-def sh_transfer_function(freq, hl, vs, dn, qs=[], inc_ang=0.):
+def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0.):
     """
     Compute the SH-wave transfer function using Knopoff formalism
     (implicit layer matrix scheme). Calculation can be done for an
@@ -91,7 +91,7 @@ def sh_transfer_function(freq, hl, vs, dn, qs=[], inc_ang=0.):
     attenuation.
     NOTE: the implicit scheme is simple to understand and to implement,
     but is also computationally intensive and memory consuming.
-    For the future, an explicit (recursive) scheme must be implemented.
+    For the future, an explicit (recursive) scheme should be implemented.
 
     :param numpy.array hl:
 
@@ -111,7 +111,7 @@ def sh_transfer_function(freq, hl, vs, dn, qs=[], inc_ang=0.):
     CTP = 'complex128'
 
     # Check for single frequency value
-    if not isinstance(freq, list):
+    if isinstance(freq, float):
         freq = _np.array([freq])
 
     # Model size
@@ -124,27 +124,27 @@ def sh_transfer_function(freq, hl, vs, dn, qs=[], inc_ang=0.):
     dn = _np.array(dn, dtype=CTP)
 
     # Attenuation using complex velocities
-    if qs:
+    if qs is not None:
         qs = _np.array(qs, dtype=CTP)
         vs *= ((2.*qs*1j)/(2.*qs*1j-1.))
 
-    # Angular frequency conversion
+    # Conversion to angular frequency
     angf = 2.*_np.pi*freq
 
     # -------------------------------------------------------------------------
     # Computing angle of propagation within layers
 
-    iD = _np.zeros((lnum, 1), dtype=CTP)
-    iCORE = _np.zeros((lnum, lnum), dtype=CTP)
+    iD = _np.zeros(lnum, dtype=CTP)
+    iM = _np.zeros((lnum, lnum), dtype=CTP)
 
     iD[0] = _np.sin(inc_ang)
-    iCORE[0,-1] = 1.
+    iM[0,-1] = 1.
 
     for nl in range(lnum-1):
-      iCORE[nl+1,nl] = 1./vs[nl]
-      iCORE[nl+1,nl+1] = -1./vs[nl+1]
+      iM[nl+1,nl] = 1./vs[nl]
+      iM[nl+1,nl+1] = -1./vs[nl+1]
 
-    iA = _np.linalg.solve(iCORE, iD)
+    iA = _np.linalg.solve(iM, iD)
     iS = _np.arcsin(iA)
 
     # -------------------------------------------------------------------------
@@ -154,25 +154,23 @@ def sh_transfer_function(freq, hl, vs, dn, qs=[], inc_ang=0.):
     mu = dn*(vs**2.)
 
     # Horizontal slowness
-    ns = _np.zeros((lnum, 1), dtype=CTP)
-    for nl in range(lnum):
-        ns[nl] = _np.cos(iS[nl])/vs[nl]
+    ns = _np.cos(iS)/vs
 
     # -------------------------------------------------------------------------
     # Data vector initialisation
 
-    # Layer's amplitude vector
-    A = _np.zeros((lnum*2, 1), dtype=CTP)
-
-    # Input motion vector
-    D = _np.zeros((lnum*2, 1), dtype=CTP)
-    D[-1] = 1.
+    # Layer's amplitude vector (incognita term)
+    AmpVec = _np.zeros(lnum*2, dtype=CTP)
 
     # Layer matrix
-    CORE = _np.zeros((lnum*2, lnum*2), dtype=CTP)
+    LayMat = _np.zeros((lnum*2, lnum*2), dtype=CTP)
 
-    # Ouput layer's amplitude matrix
-    AMAT = _np.zeros(fnum, dtype=CTP)
+    # Input motion vector (known term)
+    InpVec = _np.zeros(lnum*2, dtype=CTP)
+    InpVec[-1] = 1.
+
+    # Ouput layer's displacement matrix
+    DisMat = _np.zeros((lnum, fnum), dtype=CTP)
 
     # -------------------------------------------------------------------------
     # Loop over frequencies
@@ -180,42 +178,55 @@ def sh_transfer_function(freq, hl, vs, dn, qs=[], inc_ang=0.):
     for nf in range(fnum):
 
         # Reinitialise the layer matrix
-        CORE *= 0.
+        LayMat *= 0.
 
         # Free surface constraints
-        CORE[0, 0] = 1.
-        CORE[0, 1] = -1.
+        LayMat[0, 0] = 1.
+        LayMat[0, 1] = -1.
 
         # Interface constraints
         for nl in range(lnum-1):
-
             row = (nl*2)+1
             col = nl*2
 
             expDSA = _np.exp(1j*angf[nf]*ns[nl]*hl[nl])
             expUSA = _np.exp(-1j*angf[nf]*ns[nl]*hl[nl])
 
-            CORE[row, col+0] = expDSA[0]
-            CORE[row, col+1] = expUSA[0]
-            CORE[row, col+2] = -1.
-            CORE[row, col+3] = -1.
+            # Displacement continuity conditions
+            LayMat[row, col+0] = expDSA
+            LayMat[row, col+1] = expUSA
+            LayMat[row, col+2] = -1.
+            LayMat[row, col+3] = -1.
 
-            CORE[row+1, col+0] =  mu[nl][0]*ns[nl][0]*expDSA[0]
-            CORE[row+1, col+1] = -mu[nl][0]*ns[nl][0]*expUSA[0]
-            CORE[row+1, col+2] = -mu[nl+1][0]*ns[nl+1][0]
-            CORE[row+1, col+3] =  mu[nl+1][0]*ns[nl+1][0]
+            # Stress continuity conditions
+            LayMat[row+1, col+0] = mu[nl]*ns[nl]*expDSA
+            LayMat[row+1, col+1] = -mu[nl]*ns[nl]*expUSA
+            LayMat[row+1, col+2] = -mu[nl+1]*ns[nl+1]
+            LayMat[row+1, col+3] = mu[nl+1]*ns[nl+1]
 
         # Input motion constraints
-        CORE[-1, -1] = 1.
+        LayMat[-1, -1] = 1.
 
-        # Solving linear system of layer's displacement amplitudes
+        # Solving linear system of wave's amplitudes
         try:
-            A = _np.linalg.solve(CORE, D)
+            AmpVec = _np.linalg.solve(LayMat, InpVec)
         except:
-            A[:] = _np.nan
+            AmpVec[:] = _np.nan
 
-        # Adding displacement amplitude to the output matrix
-        AMAT[nf] = A
+        # ---------------------------------------------------------------------
+        # Solving displacement at the interfaces
 
-    return AMAT
+        # Displacement a the surface
+        DisMat[0, nf] = AmpVec[0] + AmpVec[1]
 
+        # Loop through layer interfaces
+        for nl in range(lnum-1):
+            expDSA = _np.exp(1j*angf[nf]*ns[nl]*hl[nl])
+            expUSA = _np.exp(-1j*angf[nf]*ns[nl]*hl[nl])
+
+            disDSA = AmpVec[nl*2]*expDSA
+            disUSA = AmpVec[nl*2+1]*expUSA
+
+            DisMat[nl+1, nf] = disDSA + disUSA
+
+    return DisMat
