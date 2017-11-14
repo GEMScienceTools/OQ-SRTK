@@ -98,6 +98,10 @@ class ImpedanceAmplificationTestCase(unittest.TestCase):
 # =============================================================================
 
 class ShTansferFunctionTestCase(unittest.TestCase):
+    """
+    Results are verified against those obtained from the PSVQ code
+    of F.J. Sanchez Sesma, modified by Roberto Paolucci
+    """
 
     def check_amplification(self,
                             test_file,
