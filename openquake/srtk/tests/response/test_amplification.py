@@ -23,8 +23,10 @@
 
 import unittest
 import numpy as np
+import numpy.testing as npt
 
 from openquake.srtk.response.amplification import impedance_amplification
+from openquake.srtk.response.amplification import sh_transfer_function
 
 
 # =============================================================================
@@ -91,3 +93,90 @@ class ImpedanceAmplificationTestCase(unittest.TestCase):
                                  0.,
                                  np.array([3.63, 1.72, 1.]),
                                  0.01)
+
+
+# =============================================================================
+
+class ShTansferFunctionTestCase(unittest.TestCase):
+
+    def check_amplification(self,
+                            test_file,
+                            hl,
+                            vs,
+                            dn,
+                            qs,
+                            inc_ang,
+                            depth,
+                            decimal=2.):
+
+        freq, ampf = self.read_psvq_file(test_file)
+        freq = np.array(freq)
+
+        disp = sh_transfer_function(freq, hl, vs, dn, qs, inc_ang, depth)
+
+        npt.assert_almost_equal(ampf,
+                                disp[0]/2,
+                                decimal=decimal)
+
+    def read_psvq_file(self, input_file):
+
+        freq = []
+        ampf = []
+        with open(input_file, 'r') as f:
+            for line in f:
+                value = line.strip().split()
+                freq.append(float(value[0]))
+                ampf.append(float(value[1]))
+            f.close()
+
+        return freq, ampf
+
+    def test_2_layer_model_free_surface(self):
+
+        self.check_amplification('data/psvq/2_layer_model/amp.i0.txt',
+                                 np.array([100., 0.]),
+                                 np.array([200., 1200.]),
+                                 np.array([1900., 2500.]),
+                                 np.array([10., 100.]),
+                                 0.,
+                                 0.)
+
+    def test_2_layer_model_1st_interface(self):
+
+        self.check_amplification('data/psvq/2_layer_model/amp.i1.txt',
+                                 np.array([100., 0.]),
+                                 np.array([200., 1200.]),
+                                 np.array([1900., 2500.]),
+                                 np.array([10., 100.]),
+                                 0.,
+                                 100.)
+
+    def test_3_layer_model_free_surface(self):
+
+        self.check_amplification('data/psvq/3_layer_model/amp.i0.txt',
+                                 np.array([10., 50., 0]),
+                                 np.array([200., 500., 1200.]),
+                                 np.array([1900., 2100., 2500.]),
+                                 np.array([10., 20., 100.]),
+                                 0.,
+                                 0.)
+
+    def test_3_layer_model_1st_interface(self):
+
+        self.check_amplification('data/psvq/3_layer_model/amp.i1.txt',
+                                 np.array([10., 50., 0]),
+                                 np.array([200., 500., 1200.]),
+                                 np.array([1900., 2100., 2500.]),
+                                 np.array([10., 20., 100.]),
+                                 0.,
+                                 10.)
+
+    def test_3_layer_model_2nd_interface(self):
+
+        self.check_amplification('data/psvq/3_layer_model/amp.i2.txt',
+                                 np.array([10., 50., 0]),
+                                 np.array([200., 500., 1200.]),
+                                 np.array([1900., 2100., 2500.]),
+                                 np.array([10., 20., 100.]),
+                                 0.,
+                                 60.)

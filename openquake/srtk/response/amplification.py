@@ -35,6 +35,7 @@ def impedance_amplification(top_vs, top_dn, ref_vs=[], ref_dn=[], inc_ang=0.):
     This function calculates the amplification due to a single seismic
     impedance contrast as formalized in Joyner et al. (1981) and
     Boore (2013).
+
     Site (top) parameters can be either scalars or arrays, as for
     the case of quarter-wavelenght approximation. If no reference
     is provided, the last value of the site array is used.
@@ -53,7 +54,8 @@ def impedance_amplification(top_vs, top_dn, ref_vs=[], ref_dn=[], inc_ang=0.):
         lowermost (reference) density in kg/m3
 
     :param float inc_ang:
-        angle of incidence relative to the vertical direction in degree
+        angle of incidence in degrees, relative to the vertical
+        (default is vertical incidence)
 
     :return float or array imp_amp:
         amplification due to the seismic impedance contrast
@@ -81,39 +83,56 @@ def impedance_amplification(top_vs, top_dn, ref_vs=[], ref_dn=[], inc_ang=0.):
 
     return imp_amp
 
+
 # =============================================================================
 
-def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0., depth=None):
+def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0., depth=0.):
     """
     Compute the SH-wave transfer function using Knopoff formalism
     (implicit layer matrix scheme). Calculation can be done for an
     arbitrary angle of incidence (0-90), with or without anelastic
-    attenuation.
+    attenuation (qs is optional).
+
+    It return the displacements computed at arbitrary depth.
+    If depth = -1, calculation is done at each layer interface
+    of the profile.
+
     NOTE: the implicit scheme is simple to understand and to implement,
     but is also computationally intensive and memory consuming.
     For the future, an explicit (recursive) scheme should be implemented.
 
+    :param float or numpy.array freq:
+        array of frequencies in Hz for the calculation
+
     :param numpy.array hl:
+        array of layer's thicknesses in meters (half-space is 0.)
 
     :param numpy.array vs:
+        array of layer's shear-wave velocities in m/s
 
     :param numpy.array dn:
+        array of layer's densities in kg/m3
 
     :param numpy.array qs:
+        array of layer's shear-wave quality factors (adimensional)
 
-    :param float or numpy.array freq:
-
-    :param numpy.array freq:
+    :param float inc_ang:
+        angle of incidence in degrees, relative to the vertical
+        (default is vertical incidence)
 
     :param float or numpy.array depth:
+        dephts in meters at which displacements are calculated
+        (default is the free surface)
 
+    :return numpy.array DisMat:
+        matrix of displacements computed at each depth
     """
 
     # Precision of the complex type
     CTP = 'complex128'
 
     # Check for single frequency value
-    if isinstance(freq, float):
+    if isinstance(freq, (int, float)):
         freq = _np.array([freq])
 
     # Model size
@@ -133,6 +152,17 @@ def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0., depth=None):
     # Conversion to angular frequency
     angf = 2.*_np.pi*freq
 
+    # Layer boundary depth (including free surface)
+    bounds = interface_depth(hl, dtype=CTP)
+
+    # Check for depth to calculate displacements
+    if isinstance(depth, (int, float)):
+        if depth < 0.:
+            depth = _np.array(bounds)
+        else:
+            depth = _np.array([depth])
+    znum = len(depth)
+
     # -------------------------------------------------------------------------
     # Computing angle of propagation within layers
 
@@ -140,11 +170,11 @@ def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0., depth=None):
     iM = _np.zeros((lnum, lnum), dtype=CTP)
 
     iD[0] = _np.sin(inc_ang)
-    iM[0,-1] = 1.
+    iM[0, -1] = 1.
 
     for nl in range(lnum-1):
-      iM[nl+1,nl] = 1./vs[nl]
-      iM[nl+1,nl+1] = -1./vs[nl+1]
+        iM[nl+1, nl] = 1./vs[nl]
+        iM[nl+1, nl+1] = -1./vs[nl+1]
 
     iA = _np.linalg.solve(iM, iD)
     iS = _np.arcsin(iA)
@@ -172,11 +202,7 @@ def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0., depth=None):
     InpVec[-1] = 1.
 
     # Output layer's displacement matrix
-    if depth is None:
-        DisMat = _np.zeros((lnum, fnum), dtype=CTP)
-    else:
-        DisMat = _np.zeros((len(depth), fnum), dtype=CTP)
-        hl_cum = _np.cumsum(hl)
+    DisMat = _np.zeros((znum, fnum))
 
     # -------------------------------------------------------------------------
     # Loop over frequencies
@@ -220,46 +246,52 @@ def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0., depth=None):
             AmpVec[:] = _np.nan
 
         # ---------------------------------------------------------------------
-        # Solving displacements:
+        # Solving displacements at depth
 
-        if depth is None:
-            # CASE 1) at the layer interfaces
-            # Note: interfaces can be calculated also using CASE 2
-            #       and it could be then removed
+        for nz in range(znum):
 
-            # Displacement a the surface
-            DisMat[0, nf] = AmpVec[0] + AmpVec[1]
+            # Check in which layer falls the calculation depth
+            if depth[nz] <= hl[0]:
+                nl = 0
+                dh = depth[nz]
+            elif depth[nz] > bounds[-1]:
+                nl = lnum-1
+                dh = depth[nz] - bounds[-1]
+            else:
+                # There might be a more python way to do that...
+                nl = map(lambda x: x >= depth[nz], bounds).index(True) - 1
+                dh = depth[nz] - bounds[nl]
 
-            # Loop through layer interfaces
-            for nl in range(lnum-1):
-                expDSA = _np.exp(1j*angf[nf]*ns[nl]*hl[nl])
-                expUSA = _np.exp(-1j*angf[nf]*ns[nl]*hl[nl])
+            # Displacement of the up-going and down-going waves
+            expDSA = _np.exp(1j*angf[nf]*ns[nl]*dh)
+            expUSA = _np.exp(-1j*angf[nf]*ns[nl]*dh)
 
-                disDSA = AmpVec[nl*2]*expDSA
-                disUSA = AmpVec[nl*2+1]*expUSA
+            disDSA = AmpVec[nl*2]*expDSA
+            disUSA = AmpVec[nl*2+1]*expUSA
 
-                DisMat[nl+1, nf] = disDSA + disUSA
-
-        else:
-            # CASE 2) at arbitrary depth
-            for nz in range(len(depth)):
-
-                if depth[nz] <= hl[0]:
-                    nl = 0
-                    dh = depth[nz]
-                elif depth[nz] > _np.max(hl_cum):
-                    nl = lnum-1
-                    dh = depth[nz] - _np.max(hl_cum)
-                else:
-                    nl = map(lambda x: x>=depth[nz], hl_cum).index(True)
-                    dh = depth[nz] - hl_cum[nl-1]
-
-                expDSA = _np.exp(1j*angf[nf]*ns[nl]*dh)
-                expUSA = _np.exp(-1j*angf[nf]*ns[nl]*dh)
-
-                disDSA = AmpVec[nl*2]*expDSA
-                disUSA = AmpVec[nl*2+1]*expUSA
-
-                DisMat[nz, nf] = disDSA + disUSA
+            DisMat[nz, nf] = _np.abs(disDSA + disUSA)
 
     return DisMat
+
+
+# =============================================================================
+
+def interface_depth(hl, dtype='float64'):
+    """
+    Utility to calcualte the depth of the layer's interface
+    (including the free surface) from a 1d thickness profile.
+
+    :param numpy.array hl:
+        array of layer's thicknesses in meters (half-space is 0.)
+
+    :param string dtype:
+        data type for variable casting (optional)
+
+    :return numpy.array depth:
+        array of interface depths in meters
+    """
+
+    depth = [sum(hl[:i]) for i in range(len(hl))]
+    depth = _np.array(depth, dtype=dtype)
+
+    return depth
