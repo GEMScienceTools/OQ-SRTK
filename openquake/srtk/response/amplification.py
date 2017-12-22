@@ -124,7 +124,7 @@ def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0., depth=0.):
         dephts in meters at which displacements are calculated
         (default is the free surface)
 
-    :return numpy.array DisMat:
+    :return numpy.array dis_mat:
         matrix of displacements computed at each depth
     """
 
@@ -192,17 +192,17 @@ def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0., depth=0.):
     # Data vector initialisation
 
     # Layer's amplitude vector (incognita term)
-    AmpVec = _np.zeros(lnum*2, dtype=CTP)
+    amp_vec = _np.zeros(lnum*2, dtype=CTP)
 
     # Layer matrix
-    LayMat = _np.zeros((lnum*2, lnum*2), dtype=CTP)
+    lay_mat = _np.zeros((lnum*2, lnum*2), dtype=CTP)
 
     # Input motion vector (known term)
-    InpVec = _np.zeros(lnum*2, dtype=CTP)
-    InpVec[-1] = 1.
+    inp_vec = _np.zeros(lnum*2, dtype=CTP)
+    inp_vec[-1] = 1.
 
     # Output layer's displacement matrix
-    DisMat = _np.zeros((znum, fnum))
+    dis_mat = _np.zeros((znum, fnum))
 
     # -------------------------------------------------------------------------
     # Loop over frequencies
@@ -210,40 +210,40 @@ def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0., depth=0.):
     for nf in range(fnum):
 
         # Reinitialise the layer matrix
-        LayMat *= 0.
+        lay_mat *= 0.
 
         # Free surface constraints
-        LayMat[0, 0] = 1.
-        LayMat[0, 1] = -1.
+        lay_mat[0, 0] = 1.
+        lay_mat[0, 1] = -1.
 
         # Interface constraints
         for nl in range(lnum-1):
             row = (nl*2)+1
             col = nl*2
 
-            expDSA = _np.exp(1j*angf[nf]*ns[nl]*hl[nl])
-            expUSA = _np.exp(-1j*angf[nf]*ns[nl]*hl[nl])
+            exp_dsa = _np.exp(1j*angf[nf]*ns[nl]*hl[nl])
+            exp_usa = _np.exp(-1j*angf[nf]*ns[nl]*hl[nl])
 
             # Displacement continuity conditions
-            LayMat[row, col+0] = expDSA
-            LayMat[row, col+1] = expUSA
-            LayMat[row, col+2] = -1.
-            LayMat[row, col+3] = -1.
+            lay_mat[row, col+0] = exp_dsa
+            lay_mat[row, col+1] = exp_usa
+            lay_mat[row, col+2] = -1.
+            lay_mat[row, col+3] = -1.
 
             # Stress continuity conditions
-            LayMat[row+1, col+0] = mu[nl]*ns[nl]*expDSA
-            LayMat[row+1, col+1] = -mu[nl]*ns[nl]*expUSA
-            LayMat[row+1, col+2] = -mu[nl+1]*ns[nl+1]
-            LayMat[row+1, col+3] = mu[nl+1]*ns[nl+1]
+            lay_mat[row+1, col+0] = mu[nl]*ns[nl]*exp_dsa
+            lay_mat[row+1, col+1] = -mu[nl]*ns[nl]*exp_usa
+            lay_mat[row+1, col+2] = -mu[nl+1]*ns[nl+1]
+            lay_mat[row+1, col+3] = mu[nl+1]*ns[nl+1]
 
         # Input motion constraints
-        LayMat[-1, -1] = 1.
+        lay_mat[-1, -1] = 1.
 
         # Solving linear system of wave's amplitudes
         try:
-            AmpVec = _np.linalg.solve(LayMat, InpVec)
+            amp_vec = _np.linalg.solve(lay_mat, inp_vec)
         except:
-            AmpVec[:] = _np.nan
+            amp_vec[:] = _np.nan
 
         # ---------------------------------------------------------------------
         # Solving displacements at depth
@@ -263,15 +263,15 @@ def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0., depth=0.):
                 dh = depth[nz] - bounds[nl]
 
             # Displacement of the up-going and down-going waves
-            expDSA = _np.exp(1j*angf[nf]*ns[nl]*dh)
-            expUSA = _np.exp(-1j*angf[nf]*ns[nl]*dh)
+            exp_dsa = _np.exp(1j*angf[nf]*ns[nl]*dh)
+            exp_usa = _np.exp(-1j*angf[nf]*ns[nl]*dh)
 
-            disDSA = AmpVec[nl*2]*expDSA
-            disUSA = AmpVec[nl*2+1]*expUSA
+            dis_dsa = amp_vec[nl*2]*exp_dsa
+            dis_usa = amp_vec[nl*2+1]*exp_usa
 
-            DisMat[nz, nf] = _np.abs(disDSA + disUSA)
+            dis_mat[nz, nf] = _np.abs(dis_dsa + dis_usa)
 
-    return DisMat
+    return dis_mat
 
 
 # =============================================================================
