@@ -26,6 +26,12 @@ Module containing the database classes to handle site information.
 
 import numpy as _np
 
+# =============================================================================
+# Constants
+
+GEO_KEYS = ['hl','vp','vs','dn','qp','qs']
+ENG_KEYS = ['vsz','qwl','kappa','class']
+AMP_KEYS = ['shtf','aimp','attf']
 
 # =============================================================================
 
@@ -35,28 +41,25 @@ class Model(object):
     soil profile, derived engineering parameters and amplification.
     """
 
-    geo_keys = ['hl','vp','vs','dn','qp','qs']
-    eng_keys = ['vz','qwl','k0','gc']
-    amp_keys = ['shtf','imp','attf']
-
     #--------------------------------------------------------------------------
 
     def __init__(self):
-        self._par_init()
+
+        self._geo_init()
         self._eng_init()
         self._amp_init()
 
-    def _par_init(self):
+    def _geo_init(self):
         self.geo = {}
-        for K in self.geo_keys: self.geo[K] = []
+        for K in GEO_KEYS: self.geo[K] = _np.array([])
 
     def _eng_init(self):
         self.eng = {}
-        for K in self.eng_keys: self.eng[K] = []
+        for K in ENG_KEYS: self.eng[K] = _np.array([])
 
     def _amp_init(self):
         self.amp = {}
-        for K in self.amp_keys: self.amp[K] = []
+        for K in AMP_KEYS: self.amp[K] = _np.array([])
 
     #--------------------------------------------------------------------------
 
@@ -65,9 +68,10 @@ class Model(object):
         Method to add a single layer to the 1d soil profile
         at arbitrary location.
 
-        :param listo or dictionary data:
+        :param list or dictionary data:
             Data can be a list of values sorted according to key list,
             or a dictionary with the corresponding keys
+
         :param int index:
             Index of the position along the profile where the layer
             should be added. Use -1 for the last layer (default).
@@ -77,21 +81,21 @@ class Model(object):
 
         # Case: List
         if isinstance(data, list):
-            for I, K in enumerate(self.geo_keys):
+            for I, K in enumerate(GEO_KEYS):
                 if index < 0: index = len(self.geo[K])
                 if I < len(data):
-                    self.geo[K].insert(index, data[I])
+                    self.geo[K] = _np.insert(self.geo[K], index, data[I])
                 else:
-                    self.geo[K].insert(index, None)
+                    self.geo[K] = _np.insert(self.geo[K], index, _np.nan)
 
         # Case: Dictionary
         if isinstance(data, dict):
-            for K in self.geo_keys:
+            for K in GEO_KEYS:
                 if index < 0: index = len(self.geo[K])
                 if K in data.keys():
-                    self.geo[K].insert(index, data[K])
+                    self.geo[K] = _np.insert(self.geo[K], index, data[K])
                 else:
-                    self.geo[K].insert(index, None)
+                    self.geo[K] = _np.insert(self.geo[K], index, _np.nan)
 
     #--------------------------------------------------------------------------
 
@@ -105,7 +109,72 @@ class Model(object):
             should be removed. Use -1 for the last layer (default).
         """
 
-        del self.geo[int(index)]
+        for K in GEO_KEYS:
+            self.geo[K] = _np.delete(self.geo[K], int(index))
+
+    #--------------------------------------------------------------------------
+    def from_file(self, ascii_file, header=[],
+                                    skip=0,
+                                    comment='#',
+                                    delimiter=','):
+        """
+        Method to parse soil properties from tabular ascii file;
+        arbitrary formatting is allowed
+
+        :param string ascii_file:
+            Input model file. Default format is:
+                hl,vp,vs,dn
+                10,300,200,1900
+                10,500,300,1900
+
+        :param list header:
+            List of header keys, to be used when not
+            available within the input file
+
+        :param int skip:
+            Number of intitial lines to skip;
+            default value is 0
+
+        :param char or string comment:
+            String to mark comments (which are not parsed);
+            default value is the hash character
+
+        :param char delimiter:
+            Character separator between data fields;
+            default value is comma
+        """
+
+        # Delete any previous model
+        self._geo_init()
+
+        # Open input ascii file
+        try:
+            f = open(ascii_file, 'r')
+
+        except:
+            print('Error: Wrong file or file path')
+            return
+
+        else:
+            # Ignore initial line(s) if necessary
+            for _ in range(0, skip):
+                next(f)
+
+            for line in f:
+                line = line.strip()
+
+                # Skip comments
+                if line[0] != comment:
+                    data = line.split(delimiter)
+
+                    # Import header and data
+                    if not header:
+                        header = data
+                    else:
+                        layer = {k:float(d) for k,d in zip(header,data)}
+                        self.add_layer(layer)
+
+            f.close()
 
 
 # =============================================================================
@@ -119,35 +188,105 @@ class Site1D(object):
 
     def __init__(self, id=None, x=None, y=None, z=None):
 
-      self.head = {}
-      self.head['id'] = Id
-      self.head['x'] = X
-      self.head['y'] = Y
-      self.head['z'] = Z
+        self.head = {}
+        self.head['id'] = id
+        self.head['x'] = x
+        self.head['y'] = y
+        self.head['z'] = x
 
-      self.model = []
+        self.model = []
 
     #--------------------------------------------------------------------------
 
     def add_model(self, model=[], index=-1):
-      """
-      Add a soil model to the site database
-      """
+        """
+        Add a single soil model to the site database
 
-      index = int(index)
-      if index < 0: index = len(self.model)
+        :param Model model:
+            The model the be added; if not specificed,
+            an empty model is added
 
-      if mod:
-        self.model.insert(index, model)
-      else:
-        self.model.insert(index, Model())
+        :param int index:
+            Index of where to include the model in the database;
+            use -1 to append (default)
+        """
+
+        index = int(index)
+        if index < 0: index = len(self.model)
+
+        if model:
+            self.model.insert(index, model)
+        else:
+            self.model.insert(index, Model())
 
     #--------------------------------------------------------------------------
 
     def del_model(self, index=-1):
-      """
-      Remove a model from the site database.
-      """
+        """
+        Remove a model from the site database
 
-      del self.model[int(index)]
+        :param int index:
+            Index of the model to be removed from the database;
+            use -1 for the last position (default)
+        """
+
+        del self.model[int(index)]
+
+    #--------------------------------------------------------------------------
+
+    def read_model(self, ascii_file, header=[],
+                                     skip=0,
+                                     comment='#',
+                                     delimiter=',',
+                                     index=-1,
+                                     owrite=False):
+        """
+        Method to parse soil properties from a single tabular
+        ascii file or a list of files; arbitrary formatting is allowed
+        
+        The method is essentially a wrapper of the read_model
+        method of the Model() class, from whom it inherits the
+        input paramters (header, skip, ...)
+
+        :param string or list ascii_file:
+            Single input model file or list of files
+
+        :param list header:
+            List of header keys, to be used when not
+            available within the input file
+
+        :param int skip:
+            Number of intitial lines to skip;
+            default value is 0
+
+        :param char or string comment:
+            String to mark comments (which are not parsed);
+            default value is the hash character
+
+        :param char delimiter:
+            Character separator between data fields;
+            default value is comma
+
+        :param int index:
+            Index of where to include the model in the database;
+            use -1 to append (default)
+
+        :param boolean owrite:
+            Flag to enable model overwriting; in this case,
+            the index is that of the model to be overwritten
+        """
+
+        if not isinstance(ascii_file, list):
+            ascii_file = [ascii_file]
+
+        for af in ascii_file:
+            model = Model()
+            model.from_file(af, header, skip, comment, delimiter)
+
+            if owrite:
+                self.model[index] = model
+            else:
+                self.add_model(model, index)
+
+
 
