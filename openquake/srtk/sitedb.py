@@ -25,6 +25,8 @@ Module containing the database classes to handle site information.
 """
 
 import numpy as _np
+import openquake.srtk.soil.average as _avg
+import openquake.srtk.utils as _ut
 
 # =============================================================================
 # Constants
@@ -32,6 +34,9 @@ import numpy as _np
 GEO_KEYS = ['hl','vp','vs','dn','qp','qs']
 ENG_KEYS = ['vsz','qwl','kappa','class']
 AMP_KEYS = ['shtf','aimp','attf']
+
+# Precision for decimal rounding
+DECIMALS = 4
 
 # =============================================================================
 
@@ -196,6 +201,12 @@ class Site1D(object):
 
         self.model = []
 
+        self._eng_init()
+
+    def _eng_init(self):
+        self.eng = {}
+        for K in ENG_KEYS: self.eng[K] = _np.array([])
+
     #--------------------------------------------------------------------------
 
     def add_model(self, model=[], index=-1):
@@ -288,5 +299,34 @@ class Site1D(object):
             else:
                 self.add_model(model, index)
 
+    #--------------------------------------------------------------------------
+
+    def traveltime_average_velocity(self, depth=30.):
+        """
+        Compute and store travel-time average velocity at a given depth.
+        Multiple depths are also allowed (as list). Default is Vs30.
+
+        :param float or list depth:
+            Calculation depth
+        """
+
+        if not isinstance(depth, list):
+            depth = [depth]
+
+        for mod in self.model:
+            mod.eng['vsz'] = {}
+            for z in depth:
+                vz = _avg.traveltime_average_velocity(mod.geo['hl'],
+                                                      mod.geo['vs'],
+                                                      depth=z)
+                mod.eng['vsz'][z] = _ut.a_round(vz, DECIMALS)
+
+        # Perform statistics
+        self.eng['vsz'] = {}
+        for z in depth:
+            data = [mod.eng['vsz'][z] for mod in self.model]
+            mn, sd = _ut.log_stat(data)
+            self.eng['vsz'][z] = (_ut.a_round(mn, DECIMALS),
+                                  _ut.a_round(sd, DECIMALS))
 
 
