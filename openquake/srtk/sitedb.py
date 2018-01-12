@@ -321,7 +321,7 @@ class Site1D(object):
                                                       depth=z)
                 mod.eng['vsz'][z] = _ut.a_round(vz, DECIMALS)
 
-        # Perform statistics
+        # Perform statistics (log-normal)
         self.eng['vsz'] = {}
         for z in depth:
             data = [mod.eng['vsz'][z] for mod in self.model]
@@ -329,4 +329,28 @@ class Site1D(object):
             self.eng['vsz'][z] = (_ut.a_round(mn, DECIMALS),
                                   _ut.a_round(sd, DECIMALS))
 
+    #--------------------------------------------------------------------------
 
+    def compute_class(self, code='EC8'):
+        """
+        Compute geotechnical classification according to specified
+        building code. Default is EC8 (missing special classes).
+
+        :param string code:
+            The reference building code for the classification;
+            default EC8
+        """
+
+        try:
+            # Class from the mean Vs30 model
+            vs30 = self.eng['vsz'][30.][0]
+            self.eng['class'] = _avg.gt_soil_class(vs30, code)
+
+            # Class of each profile
+            for mod in self.model:
+                vs30 = mod.eng['vsz'][30.]
+                mod.eng['class'] = _avg.gt_soil_class(vs30, code)
+
+        except:
+            print 'Error: Vs30 must be calculated first'
+            return

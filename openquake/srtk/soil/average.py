@@ -200,3 +200,34 @@ def _qwl_fit_func(search_depth, thickness, slowness, frequency):
     misfit = _np.abs(search_depth - (1./(4.*frequency*qwl_slowness)))
 
     return misfit
+
+
+# =============================================================================
+
+def gt_soil_class(vs30, code='EC8'):
+    """
+    Compute geotechnical soil class from a given vs30 according
+    to a specified building code. Default is EC8.
+
+    :param float vs30:
+        The travel-time average over the first 30m
+
+    :param string code:
+        The reference building code for the classification;
+        default EC8
+
+    reuturn string gt_class:
+        Label of the getechnical soil class
+    """
+
+    if code == 'EC8':
+        if vs30 >= 800.:
+            gt_class = 'A'
+        if vs30 >= 360. and vs30 < 800.:
+            gt_class = 'B'
+        if vs30 >= 180. and vs30 < 360.:
+            gt_class = 'C'
+        if vs30 < 180.:
+            gt_class = 'D'
+
+    return gt_class
