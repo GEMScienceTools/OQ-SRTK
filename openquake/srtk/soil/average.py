@@ -220,14 +220,14 @@ def _qwl_fit_func(search_depth, thickness, slowness, frequency):
 def gt_soil_class(vs30, code='EC8'):
     """
     Compute geotechnical soil class from a given vs30 according
-    to a specified building code. Default is EC8.
+    to a specified building code.
 
     :param float vs30:
         The travel-time average over the first 30m
 
     :param string code:
         The reference building code for the classification;
-        default EC8
+        default is EC8
 
     reuturn string gt_class:
         Label of the getechnical soil class
@@ -242,5 +242,18 @@ def gt_soil_class(vs30, code='EC8'):
             gt_class = 'C'
         if vs30 < 180.:
             gt_class = 'D'
+
+    # NEHRP (BSSC 1997)
+    if code == 'NEHRP':
+        if vs30 >= 1500.:
+            gt_class = 'A'
+        if vs30 >= 760. and vs30 < 1500.:
+            gt_class = 'B'
+        if vs30 >= 360. and vs30 < 760.:
+            gt_class = 'C'
+        if vs30 >= 180. and vs30 < 360.:
+            gt_class = 'D'
+        if vs30 < 180.:
+            gt_class = 'E'
 
     return gt_class
