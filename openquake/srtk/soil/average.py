@@ -69,7 +69,7 @@ def depth_weighted_average(thickness, soil_param, depth):
 
 # =============================================================================
 
-def traveltime_average_velocity(thickness, s_velocity, depth=30):
+def traveltime_velocity(thickness, s_velocity, depth=30):
     """
     The function calculates the travel-time average (harmonic mean)
     velocity at arbitrary depth (e.g. the widespread Vs30).
@@ -139,16 +139,19 @@ def compute_site_kappa(thickness, s_velocity, s_quality, depth=[]):
 
 # =============================================================================
 
-def quarter_wavelength_velocity(thickness, s_velocity, frequency):
+def quarter_wavelength_average(thickness, s_velocity, density, frequency):
     """
     This function solves the quarter-wavelength problem (Boore 2003)
-    and return the frequency-dependent average velocity.
+    and return the frequency-dependent average velocity and density
 
     :param numpy.array tickness:
         array of layer's thicknesses in meters (half-space is 0.)
 
     :param numpy.array s_velocity:
         array of layer's shear-wave velocities in m/s
+
+    :param numpy.array density:
+        array of layer's densities in kg/m3
 
     :param numpy.array frequency:
         array of frequencies in Hz for the calculation
@@ -158,13 +161,18 @@ def quarter_wavelength_velocity(thickness, s_velocity, frequency):
 
     :return numpy.array qwl_velocity:
         array of quarter-wavelength average velocities
+
+    :return numpy.array qwl_density:
+        array of quarter-wavelength average dencities
     """
 
     # Initialisation
     freq_num = len(frequency)
     slowness = 1./s_velocity
+
     qwl_depth = _np.zeros(freq_num)
     qwl_velocity = _np.zeros(freq_num)
+    qwl_density = _np.zeros(freq_num)
 
     for nf in range(freq_num):
 
@@ -182,7 +190,12 @@ def quarter_wavelength_velocity(thickness, s_velocity, frequency):
                                                      slowness,
                                                      qwl_depth[nf])
 
-    return qwl_depth, qwl_velocity
+        # Computing average soil property at the qwl-depth
+        qwl_density[nf] = depth_weighted_average(thickness,
+                                                 density,
+                                                 qwl_depth[nf])
+
+    return qwl_depth, qwl_velocity, qwl_density
 
 
 # =============================================================================

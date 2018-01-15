@@ -26,17 +26,18 @@ Module containing the database classes to handle site information.
 
 import numpy as _np
 import openquake.srtk.soil.average as _avg
+import openquake.srtk.response.amplification as _amp
 import openquake.srtk.utils as _ut
 
 # =============================================================================
-# Constants
-
-GEO_KEYS = ['hl','vp','vs','dn','qp','qs']
-ENG_KEYS = ['vsz','qwl','kappa','class']
-AMP_KEYS = ['shtf','aimp','attf']
+# Constants & initialisation variables
 
 # Precision for decimal rounding
 DECIMALS = 4
+
+GEO_KEYS = ['hl','vp','vs','dn','qp','qs']
+ENG_KEYS = ['vsz','qwl','kappa','class']
+AMP_KEYS = ['shtf','qwl','kappa']
 
 # =============================================================================
 
@@ -200,12 +201,18 @@ class Site1D(object):
         self.head['z'] = x
 
         self.model = []
+        self.freq = []
 
         self._eng_init()
+        self._amp_init()
 
     def _eng_init(self):
         self.eng = {}
         for K in ENG_KEYS: self.eng[K] = _np.array([])
+
+    def _amp_init(self):
+        self.amp = {}
+        for K in AMP_KEYS: self.amp[K] = _np.array([])
 
     #--------------------------------------------------------------------------
 
@@ -301,7 +308,7 @@ class Site1D(object):
 
     #--------------------------------------------------------------------------
 
-    def traveltime_average_velocity(self, depth=30.):
+    def traveltime_velocity(self, depth=30.):
         """
         Compute and store travel-time average velocity at a given depth.
         Multiple depths are also allowed (as list). Default is Vs30.
@@ -316,9 +323,9 @@ class Site1D(object):
         for mod in self.model:
             mod.eng['vsz'] = {}
             for z in depth:
-                vz = _avg.traveltime_average_velocity(mod.geo['hl'],
-                                                      mod.geo['vs'],
-                                                      depth=z)
+                vz = _avg.traveltime_velocity(mod.geo['hl'],
+                                              mod.geo['vs'],
+                                              depth=z)
                 mod.eng['vsz'][z] = _ut.a_round(vz, DECIMALS)
 
         # Perform statistics (log-normal)
@@ -331,7 +338,7 @@ class Site1D(object):
 
     #--------------------------------------------------------------------------
 
-    def compute_class(self, code='EC8'):
+    def compute_soil_class(self, code='EC8'):
         """
         Compute geotechnical classification according to specified
         building code. Default is EC8 (missing special classes).
@@ -354,3 +361,105 @@ class Site1D(object):
         except:
             print 'Error: Vs30 must be calculated first'
             return
+
+    #--------------------------------------------------------------------------
+
+    def frequency_axis(self, fmin, fmax, fnum, log=True):
+        """
+        Compute a linear or logarithmic frequency axis.
+
+        :param float fmin:
+            Minimum frequency
+
+        :param float fmax:
+            Maximum frequency
+
+        :param int fnum:
+            Number of frequencies
+
+        :param boolean log:
+            Switch between linear or logarithmic spacing
+            (default is logarithmic)
+        """
+
+        self.freq = _amp.frequency_axis(fmin, fmax, fnum, log)
+
+
+    #--------------------------------------------------------------------------
+
+    def quarter_wavelength_average(self):
+        """
+        Compute quarter-wavelength parameters (velocity and density)
+        and store them into the site database.
+        """
+
+        if not _np.sum(self.freq):
+            print 'Error: frequency axis must be first instanciated'
+            return
+
+        for mod in self.model:
+
+            # Compute average velocity
+            qwl_par = _avg.quarter_wavelength_average(mod.geo['hl'],
+                                                      mod.geo['vs'],
+                                                      mod.geo['dn'],
+                                                      self.freq)
+
+            mod.eng['qwl'] = {}
+            mod.eng['qwl']['z'] = _ut.a_round(qwl_par[0], DECIMALS)
+            mod.eng['qwl']['vs'] = _ut.a_round(qwl_par[1], DECIMALS)
+            mod.eng['qwl']['dn'] = _ut.a_round(qwl_par[2], DECIMALS)
+
+        # Perform statistics (log-normal)
+        self.eng['qwl'] = {}
+        for key in ['z','vs','dn']:
+            data = [mod.eng['qwl'][key] for mod in self.model]
+            mn, sd = _ut.log_stat(data)
+            self.eng['qwl'][key] = (_ut.a_round(mn, DECIMALS),
+                                    _ut.a_round(sd, DECIMALS))
+
+
+    #--------------------------------------------------------------------------
+
+    def quarter_wavelength_amplification (self, vs_ref=[],
+                                                dn_ref=[],
+                                                inc_ang=0.):
+        """
+        Compute the amplification as impedance contrast of
+        quarter-wavelength parameters. Aribitrary reference
+        can be provided, otherwise the last layer of the model
+        is used. Angle of incidence is optional.
+
+        :param float or numpy.array ref_vs:
+            lowermost (reference) shear-wave velocity in m/s
+
+        :param float or numpy.array ref_dn:
+            lowermost (reference) density in kg/m3
+
+        :param float inc_ang:
+            angle of incidence in degrees, relative to the vertical
+            (default is vertical incidence)
+        """
+
+        for mod in self.model:
+
+            if _ut.is_empty(vs_ref):
+                vs_ref = mod.geo['vs'][-1]
+
+            if _ut.is_empty(dn_ref):
+                dn_ref = mod.geo['dn'][-1]
+
+            qwl_amp = _amp.impedance_amplification(mod.eng['qwl']['vs'],
+                                                   mod.eng['qwl']['dn'],
+                                                   vs_ref,
+                                                   dn_ref,
+                                                   inc_ang)
+
+            mod.amp['qwl'] = _ut.a_round(qwl_amp, DECIMALS)
+
+        # Perform statistics (log-normal)
+        self.amp['qwl'] = {}
+        data = [mod.amp['qwl'] for mod in self.model]
+        mn, sd = _ut.log_stat(data)
+        self.amp['qwl'] = (_ut.a_round(mn, DECIMALS),
+                           _ut.a_round(sd, DECIMALS))

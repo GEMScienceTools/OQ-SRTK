@@ -30,6 +30,37 @@ import numpy as _np
 
 # =============================================================================
 
+def frequency_axis(fmin, fmax, fnum, log=True):
+    """
+    Compute a linear or logarithmic frequency axis
+
+    :param float fmin:
+        Minimum frequency
+
+    :param float fmax:
+        Maximum frequency
+
+    :param int fnum:
+        Number of frequencies
+
+    :param boolean log:
+        Switch between linear or logarithmic spacing
+        (default is logarithmic)
+
+    :return numpy.array freq:
+        The frequency axis
+    """
+
+    if log:
+        freq = _np.logspace(_np.log10(fmin), _np.log10(fmax), fnum)
+    else:
+        freq = _np.linspace(fmin, fmax, fnum)
+
+    return freq
+
+
+# =============================================================================
+
 def impedance_amplification(top_vs, top_dn, ref_vs=[], ref_dn=[], inc_ang=0.):
     """
     This function calculates the amplification due to a single seismic

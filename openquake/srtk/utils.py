@@ -67,8 +67,8 @@ def lin_stat(data):
         Mean and standard deviation
     """
 
-    mn = _np.mean(data)
-    sd = _np.std(data)
+    mn = _np.mean(data,axis=0)
+    sd = _np.std(data,axis=0)
 
     return (mn, sd)
 
@@ -85,8 +85,8 @@ def log_stat(data):
 
     """
 
-    mn = _np.exp(_np.mean(_np.log(data)))
-    sd = _np.exp(_np.std(_np.log(data)))
+    mn = _np.exp(_np.mean(_np.log(data),axis=0))
+    sd = _np.exp(_np.std(_np.log(data),axis=0))
 
     return (mn, sd)
 
