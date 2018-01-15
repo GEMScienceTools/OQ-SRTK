@@ -117,6 +117,29 @@ def impedance_amplification(top_vs, top_dn, ref_vs=[], ref_dn=[], inc_ang=0.):
 
 # =============================================================================
 
+def attenuation_decay(freq, kappa):
+    """
+    Compute the frequency-dependent attenuation decay function
+    for a given site Kappa (0).
+
+    :param float or numpy.array freq:
+            array of frequencies in Hz for the calculation
+
+    :param float kappa:
+        site-specific attenutation operator (kappa0)
+
+    :return numpy.array att_func:
+        attenuation decay function (array)
+    """
+
+    # Computing attenuation function
+    att_fun = _np.exp(-_np.pi*kappa*freq)
+
+    return att_fun
+
+
+# =============================================================================
+
 def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0., depth=0.):
     """
     Compute the SH-wave transfer function using Knopoff formalism

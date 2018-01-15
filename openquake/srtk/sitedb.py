@@ -458,8 +458,70 @@ class Site1D(object):
             mod.amp['qwl'] = _ut.a_round(qwl_amp, DECIMALS)
 
         # Perform statistics (log-normal)
-        self.amp['qwl'] = {}
         data = [mod.amp['qwl'] for mod in self.model]
         mn, sd = _ut.log_stat(data)
         self.amp['qwl'] = (_ut.a_round(mn, DECIMALS),
                            _ut.a_round(sd, DECIMALS))
+
+
+    #--------------------------------------------------------------------------
+
+    def compute_site_kappa(self, depth=[]):
+        """
+        Compute the Kappa parameter directly from the site model
+        using harmonic averaging. Caculation depth can be speficied,
+        otherwise the depth of the last layer interface is used.
+
+        :param float depth:
+            Averaging depth in meters (optional)
+        """
+
+        for mod in self.model:
+
+            # Compute kappa attenuation
+            kappa = _avg.compute_site_kappa(mod.geo['hl'],
+                                            mod.geo['vs'],
+                                            mod.geo['qs'],
+                                           depth)
+
+            mod.eng['kappa'] = _ut.a_round(kappa, DECIMALS)
+
+        # Perform statistics (normal)
+        data = [mod.eng['kappa'] for mod in self.model]
+        mn, sd = _ut.lin_stat(data)
+        self.eng['kappa'] = (_ut.a_round(mn, DECIMALS),
+                             _ut.a_round(sd, DECIMALS))
+
+
+    #--------------------------------------------------------------------------
+
+    def attenuation_decay(self):
+        """
+        Compute the frequency-dependent attenuation function
+        for a given site Kappa (0).
+        """
+
+        if not _np.sum(self.freq):
+            print 'Error: frequency axis must be first instanciated'
+            return
+
+        for mod in self.model:
+
+            # Compute kappa attenuation
+            att_fun = _amp.attenuation_decay(self.freq, mod.eng['kappa'])
+
+            mod.amp['kappa'] = _ut.a_round(att_fun, DECIMALS)
+
+        # Perform statistics (log-normal)
+        data = [mod.amp['kappa'] for mod in self.model]
+        mn, sd = _ut.log_stat(data)
+        self.amp['kappa'] = (_ut.a_round(mn, DECIMALS),
+                             _ut.a_round(sd, DECIMALS))
+
+
+
+
+
+
+
+
