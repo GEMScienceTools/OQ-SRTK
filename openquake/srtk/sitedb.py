@@ -33,7 +33,7 @@ import openquake.srtk.utils as _ut
 # Constants & initialisation variables
 
 # Precision for decimal rounding
-DECIMALS = 4
+DECIMALS = 6
 
 GEO_KEYS = ['hl','vp','vs','dn','qp','qs']
 ENG_KEYS = ['vsz','qwl','kappa','class']
@@ -200,19 +200,9 @@ class Site1D(object):
         self.head['y'] = y
         self.head['z'] = x
 
-        self.model = []
         self.freq = []
-
-        self._eng_init()
-        self._amp_init()
-
-    def _eng_init(self):
-        self.eng = {}
-        for K in ENG_KEYS: self.eng[K] = _np.array([])
-
-    def _amp_init(self):
-        self.amp = {}
-        for K in AMP_KEYS: self.amp[K] = _np.array([])
+        self.model = []
+        self.mean = Model()
 
     #--------------------------------------------------------------------------
 
@@ -329,12 +319,12 @@ class Site1D(object):
                 mod.eng['vsz'][z] = _ut.a_round(vz, DECIMALS)
 
         # Perform statistics (log-normal)
-        self.eng['vsz'] = {}
+        self.mean.eng['vsz'] = {}
         for z in depth:
             data = [mod.eng['vsz'][z] for mod in self.model]
             mn, sd = _ut.log_stat(data)
-            self.eng['vsz'][z] = (_ut.a_round(mn, DECIMALS),
-                                  _ut.a_round(sd, DECIMALS))
+            self.mean.eng['vsz'][z] = (_ut.a_round(mn, DECIMALS),
+                                       _ut.a_round(sd, DECIMALS))
 
     #--------------------------------------------------------------------------
 
@@ -350,8 +340,8 @@ class Site1D(object):
 
         try:
             # Class from the mean Vs30 model
-            vs30 = self.eng['vsz'][30.][0]
-            self.eng['class'] = _avg.gt_soil_class(vs30, code)
+            vs30 = self.mean.eng['vsz'][30.][0]
+            self.mean.eng['class'] = _avg.gt_soil_class(vs30, code)
 
             # Class of each profile
             for mod in self.model:
@@ -417,12 +407,12 @@ class Site1D(object):
             mod.eng['qwl']['dn'] = _ut.a_round(qwl_par[2], DECIMALS)
 
         # Perform statistics (log-normal)
-        self.eng['qwl'] = {}
+        self.mean.eng['qwl'] = {}
         for key in ['z','vs','dn']:
             data = [mod.eng['qwl'][key] for mod in self.model]
             mn, sd = _ut.log_stat(data)
-            self.eng['qwl'][key] = (_ut.a_round(mn, DECIMALS),
-                                    _ut.a_round(sd, DECIMALS))
+            self.mean.eng['qwl'][key] = (_ut.a_round(mn, DECIMALS),
+                                         _ut.a_round(sd, DECIMALS))
 
 
     #--------------------------------------------------------------------------
@@ -466,8 +456,8 @@ class Site1D(object):
         # Perform statistics (log-normal)
         data = [mod.amp['qwl'] for mod in self.model]
         mn, sd = _ut.log_stat(data)
-        self.amp['qwl'] = (_ut.a_round(mn, DECIMALS),
-                           _ut.a_round(sd, DECIMALS))
+        self.mean.amp['qwl'] = (_ut.a_round(mn, DECIMALS),
+                                _ut.a_round(sd, DECIMALS))
 
 
     #--------------------------------------------------------------------------
@@ -495,8 +485,8 @@ class Site1D(object):
         # Perform statistics (normal)
         data = [mod.eng['kappa'] for mod in self.model]
         mn, sd = _ut.lin_stat(data)
-        self.eng['kappa'] = (_ut.a_round(mn, DECIMALS),
-                             _ut.a_round(sd, DECIMALS))
+        self.mean.eng['kappa'] = (_ut.a_round(mn, DECIMALS),
+                                  _ut.a_round(sd, DECIMALS))
 
 
     #--------------------------------------------------------------------------
@@ -519,13 +509,13 @@ class Site1D(object):
         # Perform statistics (log-normal)
         data = [mod.amp['kappa'] for mod in self.model]
         mn, sd = _ut.log_stat(data)
-        self.amp['kappa'] = (_ut.a_round(mn, DECIMALS),
-                             _ut.a_round(sd, DECIMALS))
+        self.mean.amp['kappa'] = (_ut.a_round(mn, DECIMALS),
+                                  _ut.a_round(sd, DECIMALS))
 
 
     #--------------------------------------------------------------------------
 
-    def sh_transfer_function(self, inc_ang=0., elastic=False):
+    def sh_transfer_function(self, inc_ang=0., elastic=False, complex=False):
         """
         Compute the complex SH-wave transfer function at the
         surface for outcropping rock reference conditions.
@@ -536,15 +526,20 @@ class Site1D(object):
         see the generic sh_transfer_function method in the
         amplification module
 
-        Statistic is performed on complex spectra (to check!)
+        Statistic is performed linearly on complex spectra
+        (to check!)
 
         :param float inc_ang:
             angle of incidence in degrees, relative to the
             vertical (default is vertical incidence)
 
         :param boolean elastic:
-            swithc between elastic and anelastic calculation
+            switch between elastic and anelastic calculation
             (default is anelastic)
+
+        :param boolean complex:
+            switch to output real (abs) or complex spectra
+            (note that type of statistic is affected)
         """
 
         self._check_frequency()
@@ -562,11 +557,33 @@ class Site1D(object):
                                                 inc_ang,
                                                 0)
 
-            mod.amp['shtf'] = dis_mat[0]
+            if complex:
+                mod.amp['shtf'] = dis_mat[0]/2
+            else:
+                mod.amp['shtf'] = _np.abs(dis_mat[0])/2
 
-        # Perform statistics (normal on complex??)
+        # Perform statistics (normal on complex)
         data = [mod.amp['shtf'] for mod in self.model]
-        self.amp['shtf'] = _ut.lin_stat(data)
+        if complex:
+            self.mean.amp['shtf'] = _ut.lin_stat(data)
+        else:
+            self.mean.amp['shtf'] = _ut.log_stat(data)
 
 
+    #--------------------------------------------------------------------------
+
+    def resonance_frequency(self):
+        """
+        Identify resonance frequencies on an amplification spectrum.
+        Note that frequency on the average spectrum are identified
+        directly without performing statistic on the single models.
+        """
+
+        for mod in self.model:
+            mod.amp['fn'] = _amp.resonance_frequency(self.freq,
+                                                     mod.amp['shtf'])
+
+        fn  = _amp.resonance_frequency(self.freq,
+                                       self.mean.amp['shtf'][0])
+        self.mean.amp['fn'] = fn
 

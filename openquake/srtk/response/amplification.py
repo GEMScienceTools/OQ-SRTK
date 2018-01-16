@@ -349,3 +349,36 @@ def interface_depth(hl, dtype='float64'):
     depth = _np.array(depth, dtype=dtype)
 
     return depth
+
+
+# =============================================================================
+
+def resonance_frequency(freq, spec):
+    """
+    Identify resonance frequencies on an amplification spectrum.
+
+    :param float or numpy.array freq:
+        array of frequencies in Hz for the calculation
+
+    :param float or numpy.array spec:
+        the amplification spectrum
+
+    :return list resf:
+        list of tuples containg each a resonance frequency
+        and the corresponding amplitude
+    """
+
+    resf = []
+    spec = _np.abs(spec)
+
+    for nf in range(0, len(freq[:-2])):
+        # Three-points search for local maxima
+        a0 = spec[nf]
+        a1 = spec[nf+1]
+        a2 = spec[nf+2]
+
+        if (a1-a0) > 0 and (a2-a1) < 0:
+            resf.append((freq[nf+1], a1))
+
+    return resf
+
