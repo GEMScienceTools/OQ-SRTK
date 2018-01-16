@@ -47,7 +47,7 @@ class DepthAverageTestCase(unittest.TestCase):
 
     def test_one_layer(self):
         """
-        Case with only one layer (homogenous half space)
+        Average: Case with only one layer (homogenous half space)
         """
 
         self.check_average(np.array([0]),
@@ -57,7 +57,7 @@ class DepthAverageTestCase(unittest.TestCase):
 
     def test_three_layers_case_1(self):
         """
-        Case where the averaging depth is within the first layer
+        Average: Case where the averaging depth is within the first layer
         """
 
         self.check_average(np.array([50., 10., 0.]),
@@ -67,7 +67,7 @@ class DepthAverageTestCase(unittest.TestCase):
 
     def test_three_layers_case_2(self):
         """
-        Case where the averaging depth is within an arbitrary layer
+        Average: Case where the averaging depth is within an arbitrary layer
         """
 
         self.check_average(np.array([10., 20., 0.]),
@@ -77,7 +77,7 @@ class DepthAverageTestCase(unittest.TestCase):
 
     def test_three_layers_case_3(self):
         """
-        Case where the averaging depth is below the last layer
+        Average: Case where the averaging depth is below the last layer
         """
 
         self.check_average(np.array([10., 20., 0.]),
@@ -87,7 +87,7 @@ class DepthAverageTestCase(unittest.TestCase):
 
     def test_three_layers_case_4(self):
         """
-        Case where the averaging depth is at an interface
+        Average: Case where the averaging depth is at an interface
         """
 
         self.check_average(np.array([10., 20., 0.]),
@@ -108,16 +108,16 @@ class TravelTimeAverageTestCase(unittest.TestCase):
                       expected_result,
                       tolerance=0.):
 
-        computed_result = average.traveltime_average_velocity(thickness,
-                                                              s_velocity,
-                                                              depth)
+        computed_result = average.traveltime_velocity(thickness,
+                                                      s_velocity,
+                                                      depth)
         self.assertAlmostEqual(computed_result,
                                expected_result,
                                delta=tolerance)
 
     def test_one_layer(self):
         """
-        Case with only one layer (homogenous half space)
+        VSZ: Case with only one layer (homogenous half space)
         """
 
         self.check_average(np.array([0]),
@@ -127,7 +127,7 @@ class TravelTimeAverageTestCase(unittest.TestCase):
 
     def test_three_layer_vs30(self):
         """
-        Case with only one layer (homogenous half space)
+        VSZ: Case with three layers
         """
 
         self.check_average(np.array([5., 10., 10., 20., 0.]),
@@ -159,7 +159,7 @@ class SiteKappaTestCase(unittest.TestCase):
 
     def test_one_layer(self):
         """
-        Case with only one layer (homogenous half space)
+        Kappa: Case with only one layer (homogenous half space)
         """
 
         self.check_kappa0(np.array([0]),
@@ -170,7 +170,7 @@ class SiteKappaTestCase(unittest.TestCase):
 
     def test_three_layers(self):
         """
-        Case where the averaging depth is below the last layer
+        Kappa: Case where the averaging depth is below the last layer
         """
 
         self.check_kappa0(np.array([10., 50., 0.]),
@@ -188,13 +188,15 @@ class QuarterWavelengthTestCase(unittest.TestCase):
     def check_qwl_velocity(self,
                            thickness,
                            s_velocity,
+                           density,
                            frequency,
                            expected_result,
                            tolerance=0.):
 
-        qwl_param = average.quarter_wavelength_velocity(thickness,
-                                                        s_velocity,
-                                                        frequency)
+        qwl_param = average.quarter_wavelength_average(thickness,
+                                                       s_velocity,
+                                                       density,
+                                                       frequency)
 
         for np in [0, 1]:
             for qp, er in zip(qwl_param[np], expected_result[np]):
@@ -202,7 +204,7 @@ class QuarterWavelengthTestCase(unittest.TestCase):
 
     def test_three_layers(self):
         """
-        Testing the frequency range 0.1-100Hz
+        QWL: Testing the frequency range 0.1-100Hz
         """
 
         expected_result = [[2.36000001e+03,
@@ -214,10 +216,16 @@ class QuarterWavelengthTestCase(unittest.TestCase):
                             720.00000115,
                             440.00000477,
                             100.,
-                            100.]]
+                            100.],
+                           [2097.03389831,
+                            2080.55555567,
+                            2036.36363759,
+                            1900.,
+                            1900.]]
 
         self.check_qwl_velocity(np.array([10., 50., 0.]),
                                 np.array([100., 500., 1000.]),
+                                np.array([1900., 2000., 2100.]),
                                 np.array([0.1, 0.5, 1., 10., 100.]),
                                 expected_result,
                                 tolerance=0.00001)
