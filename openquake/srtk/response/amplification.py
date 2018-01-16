@@ -381,4 +381,3 @@ def resonance_frequency(freq, spec):
             resf.append((freq[nf+1], a1))
 
     return resf
-

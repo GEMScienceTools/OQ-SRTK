@@ -35,9 +35,11 @@ import openquake.srtk.utils as _ut
 # Precision for decimal rounding
 DECIMALS = 6
 
-GEO_KEYS = ['hl','vp','vs','dn','qp','qs']
-ENG_KEYS = ['vsz','qwl','kappa','class']
-AMP_KEYS = ['shtf','qwl','kappa']
+# Parameters keys
+GEO_KEYS = ['hl', 'vp', 'vs', 'dn', 'qp', 'qs']
+ENG_KEYS = ['vsz', 'qwl', 'kappa', 'class']
+AMP_KEYS = ['shtf', 'qwl', 'kappa']
+
 
 # =============================================================================
 
@@ -47,7 +49,7 @@ class Model(object):
     soil profile, derived engineering parameters and amplification.
     """
 
-    #--------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
 
     def __init__(self):
 
@@ -57,17 +59,20 @@ class Model(object):
 
     def _geo_init(self):
         self.geo = {}
-        for K in GEO_KEYS: self.geo[K] = _np.array([])
+        for K in GEO_KEYS:
+            self.geo[K] = _np.array([])
 
     def _eng_init(self):
         self.eng = {}
-        for K in ENG_KEYS: self.eng[K] = _np.array([])
+        for K in ENG_KEYS:
+            self.eng[K] = _np.array([])
 
     def _amp_init(self):
         self.amp = {}
-        for K in AMP_KEYS: self.amp[K] = _np.array([])
+        for K in AMP_KEYS:
+            self.amp[K] = _np.array([])
 
-    #--------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
 
     def add_layer(self, data, index=-1):
         """
@@ -88,7 +93,8 @@ class Model(object):
         # Case: List
         if isinstance(data, list):
             for I, K in enumerate(GEO_KEYS):
-                if index < 0: index = len(self.geo[K])
+                if index < 0:
+                    index = len(self.geo[K])
                 if I < len(data):
                     self.geo[K] = _np.insert(self.geo[K], index, data[I])
                 else:
@@ -97,13 +103,14 @@ class Model(object):
         # Case: Dictionary
         if isinstance(data, dict):
             for K in GEO_KEYS:
-                if index < 0: index = len(self.geo[K])
+                if index < 0:
+                    index = len(self.geo[K])
                 if K in data.keys():
                     self.geo[K] = _np.insert(self.geo[K], index, data[K])
                 else:
                     self.geo[K] = _np.insert(self.geo[K], index, _np.nan)
 
-    #--------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
 
     def del_layer(self, index=-1):
         """
@@ -118,11 +125,10 @@ class Model(object):
         for K in GEO_KEYS:
             self.geo[K] = _np.delete(self.geo[K], int(index))
 
-    #--------------------------------------------------------------------------
-    def from_file(self, ascii_file, header=[],
-                                    skip=0,
-                                    comment='#',
-                                    delimiter=','):
+    # -------------------------------------------------------------------------
+
+    def from_file(self, ascii_file, header=[], skip=0,
+                  comment='#', delimiter=','):
         """
         Method to parse soil properties from tabular ascii file;
         arbitrary formatting is allowed
@@ -177,7 +183,7 @@ class Model(object):
                     if not header:
                         header = data
                     else:
-                        layer = {k:float(d) for k,d in zip(header,data)}
+                        layer = {k: float(d) for k, d in zip(header, data)}
                         self.add_layer(layer)
 
             f.close()
@@ -204,7 +210,7 @@ class Site1D(object):
         self.model = []
         self.mean = Model()
 
-    #--------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
 
     def add_model(self, model=[], index=-1):
         """
@@ -220,14 +226,15 @@ class Site1D(object):
         """
 
         index = int(index)
-        if index < 0: index = len(self.model)
+        if index < 0:
+            index = len(self.model)
 
         if model:
             self.model.insert(index, model)
         else:
             self.model.insert(index, Model())
 
-    #--------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
 
     def del_model(self, index=-1):
         """
@@ -240,18 +247,14 @@ class Site1D(object):
 
         del self.model[int(index)]
 
-    #--------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
 
-    def read_model(self, ascii_file, header=[],
-                                     skip=0,
-                                     comment='#',
-                                     delimiter=',',
-                                     index=-1,
-                                     owrite=False):
+    def read_model(self, ascii_file, header=[], skip=0, comment='#',
+                   delimiter=',', index=-1, owrite=False):
         """
         Method to parse soil properties from a single tabular
         ascii file or a list of files; arbitrary formatting is allowed
-        
+
         The method is essentially a wrapper of the read_model
         method of the Model() class, from whom it inherits the
         input paramters (header, skip, ...)
@@ -296,7 +299,7 @@ class Site1D(object):
             else:
                 self.add_model(model, index)
 
-    #--------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
 
     def traveltime_velocity(self, depth=30.):
         """
@@ -326,7 +329,7 @@ class Site1D(object):
             self.mean.eng['vsz'][z] = (_ut.a_round(mn, DECIMALS),
                                        _ut.a_round(sd, DECIMALS))
 
-    #--------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
 
     def compute_soil_class(self, code='EC8'):
         """
@@ -352,7 +355,7 @@ class Site1D(object):
             print 'Error: Vs30 must be calculated first'
             return
 
-    #--------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
 
     def frequency_axis(self, fmin, fmax, fnum, log=True):
         """
@@ -374,7 +377,6 @@ class Site1D(object):
 
         self.freq = _amp.frequency_axis(fmin, fmax, fnum, log)
 
-
     def _check_frequency(self):
         """
         Internal: check if the frequency axis has been instantiated
@@ -383,7 +385,7 @@ class Site1D(object):
         if not _np.sum(self.freq):
             raise ValueError('Frequency axis must be first instantiated')
 
-    #--------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
 
     def quarter_wavelength_average(self):
         """
@@ -408,18 +410,16 @@ class Site1D(object):
 
         # Perform statistics (log-normal)
         self.mean.eng['qwl'] = {}
-        for key in ['z','vs','dn']:
+        for key in ['z', 'vs', 'dn']:
             data = [mod.eng['qwl'][key] for mod in self.model]
             mn, sd = _ut.log_stat(data)
             self.mean.eng['qwl'][key] = (_ut.a_round(mn, DECIMALS),
                                          _ut.a_round(sd, DECIMALS))
 
+    # -------------------------------------------------------------------------
 
-    #--------------------------------------------------------------------------
-
-    def quarter_wavelength_amplification (self, vs_ref=[],
-                                                dn_ref=[],
-                                                inc_ang=0.):
+    def quarter_wavelength_amplification(self, vs_ref=[],
+                                         dn_ref=[], nc_ang=0.):
         """
         Compute the amplification as impedance contrast of
         quarter-wavelength parameters. Aribitrary reference
@@ -459,8 +459,7 @@ class Site1D(object):
         self.mean.amp['qwl'] = (_ut.a_round(mn, DECIMALS),
                                 _ut.a_round(sd, DECIMALS))
 
-
-    #--------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
 
     def compute_site_kappa(self, depth=[]):
         """
@@ -478,7 +477,7 @@ class Site1D(object):
             kappa = _avg.compute_site_kappa(mod.geo['hl'],
                                             mod.geo['vs'],
                                             mod.geo['qs'],
-                                           depth)
+                                            depth)
 
             mod.eng['kappa'] = _ut.a_round(kappa, DECIMALS)
 
@@ -488,8 +487,7 @@ class Site1D(object):
         self.mean.eng['kappa'] = (_ut.a_round(mn, DECIMALS),
                                   _ut.a_round(sd, DECIMALS))
 
-
-    #--------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
 
     def attenuation_decay(self):
         """
@@ -512,8 +510,7 @@ class Site1D(object):
         self.mean.amp['kappa'] = (_ut.a_round(mn, DECIMALS),
                                   _ut.a_round(sd, DECIMALS))
 
-
-    #--------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
 
     def sh_transfer_function(self, inc_ang=0., elastic=False, complex=False):
         """
@@ -569,8 +566,7 @@ class Site1D(object):
         else:
             self.mean.amp['shtf'] = _ut.log_stat(data)
 
-
-    #--------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
 
     def resonance_frequency(self):
         """
@@ -583,7 +579,6 @@ class Site1D(object):
             mod.amp['fn'] = _amp.resonance_frequency(self.freq,
                                                      mod.amp['shtf'])
 
-        fn  = _amp.resonance_frequency(self.freq,
-                                       self.mean.amp['shtf'][0])
+        fn = _amp.resonance_frequency(self.freq,
+                                      self.mean.amp['shtf'][0])
         self.mean.amp['fn'] = fn
-

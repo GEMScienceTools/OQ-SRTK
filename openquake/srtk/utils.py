@@ -45,7 +45,7 @@ def a_round(number, decimals=3):
     """
 
     if isinstance(number, (list, tuple, _np.ndarray)):
-        for i,n in enumerate(number):
+        for i, n in enumerate(number):
             number[i] = round(n, decimals)
     else:
         number = round(number, decimals)
@@ -67,10 +67,13 @@ def lin_stat(data):
         Mean and standard deviation
     """
 
-    mn = _np.mean(data,axis=0)
-    sd = _np.std(data,axis=0)
+    mn = _np.mean(data, axis=0)
+    sd = _np.std(data, axis=0)
 
     return (mn, sd)
+
+
+# =============================================================================
 
 def log_stat(data):
     """
@@ -85,10 +88,11 @@ def log_stat(data):
 
     """
 
-    mn = _np.exp(_np.mean(_np.log(data),axis=0))
-    sd = _np.exp(_np.std(_np.log(data),axis=0))
+    mn = _np.exp(_np.mean(_np.log(data), axis=0))
+    sd = _np.exp(_np.std(_np.log(data), axis=0))
 
     return (mn, sd)
+
 
 # =============================================================================
 
@@ -115,6 +119,7 @@ def slice(data, index=[]):
 
     return data_slice
 
+
 # =============================================================================
 
 def is_empty(value):
@@ -126,17 +131,18 @@ def is_empty(value):
 
     :return boolean empty:
         True if no or empty value is given
-    """ 
+    """
 
     C0 = (value == [])
-    C1 = (value == '')
+    C1 = (value is '')
     C2 = (value != value)
-    C3 = (value == None)
-    C4 = (value == 'None')
+    C3 = (value is None)
+    C4 = (value is 'None')
 
     empty = (C0 or C1 or C2 or C3 or C4)
 
     return empty
+
 
 # =============================================================================
 
