@@ -119,7 +119,7 @@ class ShTansferFunctionTestCase(unittest.TestCase):
         disp = sh_transfer_function(freq, hl, vs, dn, qs, inc_ang, depth)
 
         npt.assert_almost_equal(ampf,
-                                disp[0]/2,
+                                np.abs(disp[0]/2),
                                 decimal=decimal)
 
     def read_psvq_file(self, input_file):

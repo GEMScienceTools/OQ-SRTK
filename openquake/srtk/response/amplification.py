@@ -179,7 +179,7 @@ def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0., depth=0.):
         (default is the free surface)
 
     :return numpy.array dis_mat:
-        matrix of displacements computed at each depth
+        matrix of displacements computed at each depth (complex)
     """
 
     # Precision of the complex type
@@ -256,7 +256,7 @@ def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0., depth=0.):
     inp_vec[-1] = 1.
 
     # Output layer's displacement matrix
-    dis_mat = _np.zeros((znum, fnum))
+    dis_mat = _np.zeros((znum, fnum), dtype=CTP)
 
     # -------------------------------------------------------------------------
     # Loop over frequencies
@@ -323,7 +323,7 @@ def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0., depth=0.):
             dis_dsa = amp_vec[nl*2]*exp_dsa
             dis_usa = amp_vec[nl*2+1]*exp_usa
 
-            dis_mat[nz, nf] = _np.abs(dis_dsa + dis_usa)
+            dis_mat[nz, nf] = dis_dsa + dis_usa
 
     return dis_mat
 

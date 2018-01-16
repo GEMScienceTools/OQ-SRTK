@@ -75,11 +75,11 @@ class Model(object):
         at arbitrary location.
 
         :param list or dictionary data:
-            Data can be a list of values sorted according to key list,
+            data can be a list of values sorted according to key list,
             or a dictionary with the corresponding keys
 
         :param int index:
-            Index of the position along the profile where the layer
+            index of the position along the profile where the layer
             should be added. Use -1 for the last layer (default).
         """
 
@@ -111,7 +111,7 @@ class Model(object):
         ar arbitrary location
 
         :param int index:
-            Index of the position along the profile where the layer
+            index of the position along the profile where the layer
             should be removed. Use -1 for the last layer (default).
         """
 
@@ -128,25 +128,25 @@ class Model(object):
         arbitrary formatting is allowed
 
         :param string ascii_file:
-            Input model file. Default format is:
+            input model file. Default format is:
                 hl,vp,vs,dn
                 10,300,200,1900
                 10,500,300,1900
 
         :param list header:
-            List of header keys, to be used when not
+            list of header keys, to be used when not
             available within the input file
 
         :param int skip:
-            Number of intitial lines to skip;
+            number of intitial lines to skip;
             default value is 0
 
         :param char or string comment:
-            String to mark comments (which are not parsed);
+            string to mark comments (which are not parsed);
             default value is the hash character
 
         :param char delimiter:
-            Character separator between data fields;
+            character separator between data fields;
             default value is comma
         """
 
@@ -221,11 +221,11 @@ class Site1D(object):
         Add a single soil model to the site database
 
         :param Model model:
-            The model the be added; if not specificed,
+            the model the be added; if not specificed,
             an empty model is added
 
         :param int index:
-            Index of where to include the model in the database;
+            index of where to include the model in the database;
             use -1 to append (default)
         """
 
@@ -267,30 +267,30 @@ class Site1D(object):
         input paramters (header, skip, ...)
 
         :param string or list ascii_file:
-            Single input model file or list of files
+            single input model file or list of files
 
         :param list header:
-            List of header keys, to be used when not
+            list of header keys, to be used when not
             available within the input file
 
         :param int skip:
-            Number of intitial lines to skip;
+            number of intitial lines to skip;
             default value is 0
 
         :param char or string comment:
-            String to mark comments (which are not parsed);
+            string to mark comments (which are not parsed);
             default value is the hash character
 
         :param char delimiter:
-            Character separator between data fields;
+            character separator between data fields;
             default value is comma
 
         :param int index:
-            Index of where to include the model in the database;
+            index of where to include the model in the database;
             use -1 to append (default)
 
         :param boolean owrite:
-            Flag to enable model overwriting; in this case,
+            flag to enable model overwriting; in this case,
             the index is that of the model to be overwritten
         """
 
@@ -314,7 +314,7 @@ class Site1D(object):
         Multiple depths are also allowed (as list). Default is Vs30.
 
         :param float or list depth:
-            Calculation depth
+            calculation depth
         """
 
         if not isinstance(depth, list):
@@ -344,8 +344,8 @@ class Site1D(object):
         building code. Default is EC8 (missing special classes).
 
         :param string code:
-            The reference building code for the classification;
-            default EC8
+            the reference building code for the classification
+            (default EC8)
         """
 
         try:
@@ -369,21 +369,29 @@ class Site1D(object):
         Compute a linear or logarithmic frequency axis.
 
         :param float fmin:
-            Minimum frequency
+            minimum frequency
 
         :param float fmax:
-            Maximum frequency
+            maximum frequency
 
         :param int fnum:
-            Number of frequencies
+            number of frequencies
 
         :param boolean log:
-            Switch between linear or logarithmic spacing
+            switch between linear or logarithmic spacing
             (default is logarithmic)
         """
 
         self.freq = _amp.frequency_axis(fmin, fmax, fnum, log)
 
+
+    def _check_frequency(self):
+        """
+        Internal: check if the frequency axis has been instantiated
+        """
+
+        if not _np.sum(self.freq):
+            raise ValueError('Frequency axis must be first instantiated')
 
     #--------------------------------------------------------------------------
 
@@ -393,9 +401,7 @@ class Site1D(object):
         and store them into the site database.
         """
 
-        if not _np.sum(self.freq):
-            print 'Error: frequency axis must be first instanciated'
-            return
+        self._check_frequency()
 
         for mod in self.model:
 
@@ -473,7 +479,7 @@ class Site1D(object):
         otherwise the depth of the last layer interface is used.
 
         :param float depth:
-            Averaging depth in meters (optional)
+            averaging depth in meters (optional)
         """
 
         for mod in self.model:
@@ -501,13 +507,11 @@ class Site1D(object):
         for a given site Kappa (0).
         """
 
-        if not _np.sum(self.freq):
-            print 'Error: frequency axis must be first instanciated'
-            return
+        self._check_frequency()
 
         for mod in self.model:
 
-            # Compute kappa attenuation
+            # Compute attenuation decay
             att_fun = _amp.attenuation_decay(self.freq, mod.eng['kappa'])
 
             mod.amp['kappa'] = _ut.a_round(att_fun, DECIMALS)
@@ -519,9 +523,50 @@ class Site1D(object):
                              _ut.a_round(sd, DECIMALS))
 
 
+    #--------------------------------------------------------------------------
 
+    def sh_transfer_function(self, inc_ang=0., elastic=False):
+        """
+        Compute the complex SH-wave transfer function at the
+        surface for outcropping rock reference conditions.
+        Calculation can be done for an arbitrary angle of
+        incidence (0-90), elastic or anelastic.
 
+        For more options (e.g. calculation at arbitrary depth)
+        see the generic sh_transfer_function method in the
+        amplification module
 
+        Statistic is performed on complex spectra (to check!)
+
+        :param float inc_ang:
+            angle of incidence in degrees, relative to the
+            vertical (default is vertical incidence)
+
+        :param boolean elastic:
+            swithc between elastic and anelastic calculation
+            (default is anelastic)
+        """
+
+        self._check_frequency()
+
+        for mod in self.model:
+
+            qs = mod.geo['qs'] if not elastic else None
+
+            # Compute transfer function
+            dis_mat = _amp.sh_transfer_function(self.freq,
+                                                mod.geo['hl'],
+                                                mod.geo['vs'],
+                                                mod.geo['dn'],
+                                                qs,
+                                                inc_ang,
+                                                0)
+
+            mod.amp['shtf'] = dis_mat[0]
+
+        # Perform statistics (normal on complex??)
+        data = [mod.amp['shtf'] for mod in self.model]
+        self.amp['shtf'] = _ut.lin_stat(data)
 
 
 
