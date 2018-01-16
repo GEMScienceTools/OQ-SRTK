@@ -1,0 +1,17 @@
+sudo: false
+
+language: python
+
+python:
+ - "2.7"
+
+install:
+  - pip -q download -r requirements-py27-macos.txt -d wheels
+  - pip -q install wheels/*
+  - pip -q install -e .
+
+script:
+  - nosetests -xvs
+
+after_success:
+  - pip install sphinx==1.6.5 && cd docs/sphinx && make html
