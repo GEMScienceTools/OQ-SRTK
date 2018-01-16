@@ -25,8 +25,8 @@ Module containing the database classes to handle site information.
 """
 
 import numpy as _np
-import openquake.srtk.soil.average as _avg
-import openquake.srtk.response.amplification as _amp
+import openquake.srtk.soil as _avg
+import openquake.srtk.response as _amp
 import openquake.srtk.utils as _ut
 
 # =============================================================================
@@ -92,6 +92,10 @@ class Model(object):
 
         # Case: List
         if isinstance(data, list):
+
+            # Check for zeros (replace with NaNs)
+            data = [d if d > 0 else _np.nan for d in data]
+
             for I, K in enumerate(GEO_KEYS):
                 if index < 0:
                     index = len(self.geo[K])
@@ -102,6 +106,10 @@ class Model(object):
 
         # Case: Dictionary
         if isinstance(data, dict):
+
+            # Check for zeros (replace with NaNs)
+            data = {k: (v if v > 0 else _np.nan) for k, v in data.items()}
+
             for K in GEO_KEYS:
                 if index < 0:
                     index = len(self.geo[K])
@@ -301,6 +309,19 @@ class Site1D(object):
 
     # -------------------------------------------------------------------------
 
+    def model_average(self):
+        """
+        Compute the mean soil profile and its uncertainty.
+        Note: values of 0. in the model are replaced with
+        numpy nans, to compute log-normal statistic
+        """
+
+        for key in GEO_KEYS:
+            data = [mod.geo[key] for mod in self.model]
+            self.mean.geo[key] = _ut.log_stat(data)
+
+    # -------------------------------------------------------------------------
+
     def traveltime_velocity(self, depth=30.):
         """
         Compute and store travel-time average velocity at a given depth.
@@ -419,7 +440,7 @@ class Site1D(object):
     # -------------------------------------------------------------------------
 
     def quarter_wavelength_amplification(self, vs_ref=[],
-                                         dn_ref=[], nc_ang=0.):
+                                         dn_ref=[], inc_ang=0.):
         """
         Compute the amplification as impedance contrast of
         quarter-wavelength parameters. Aribitrary reference
