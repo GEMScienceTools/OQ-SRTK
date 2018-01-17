@@ -63,4 +63,5 @@ mod.add_layer([0., 1000., 800., 2100., 100., 50.])
 # Import site models
 
 site = sitedb.Site1D(0,0,0)
-site.read_model(['data/site01.csv', 'data/site02.csv'])
+#site.read_model(['data/site01.csv', 'data/site02.csv'])
+site.read_model(['data/site01.csv', 'data/site03.csv'])

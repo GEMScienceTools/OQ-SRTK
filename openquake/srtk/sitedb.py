@@ -37,7 +37,7 @@ DECIMALS = 6
 
 # Parameters keys
 GEO_KEYS = ['hl', 'vp', 'vs', 'dn', 'qp', 'qs']
-ENG_KEYS = ['vsz', 'qwl', 'kappa', 'class']
+ENG_KEYS = ['vsz', 'qwl', 'kappa', 'class', 'weight']
 AMP_KEYS = ['shtf', 'qwl', 'kappa']
 
 
