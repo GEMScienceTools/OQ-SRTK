@@ -30,6 +30,10 @@ from openquake.srtk import soil
 # =============================================================================
 
 class DepthAverageTestCase(unittest.TestCase):
+    """
+    Test for the calculation of the weighted average 
+    of an arbitrary soil property
+    """
 
     def check_average(self,
                       thickness,
@@ -47,7 +51,7 @@ class DepthAverageTestCase(unittest.TestCase):
 
     def test_one_layer(self):
         """
-        Average: Case with only one layer (homogenous half space)
+        Case with only one layer (homogenous half space)
         """
 
         self.check_average(np.array([0]),
@@ -57,7 +61,7 @@ class DepthAverageTestCase(unittest.TestCase):
 
     def test_three_layers_case_1(self):
         """
-        Average: Case where the averaging depth is within the first layer
+        Case where the averaging depth is within the first layer
         """
 
         self.check_average(np.array([50., 10., 0.]),
@@ -67,7 +71,7 @@ class DepthAverageTestCase(unittest.TestCase):
 
     def test_three_layers_case_2(self):
         """
-        Average: Case where the averaging depth is within an arbitrary layer
+        Case where the averaging depth is within an arbitrary layer
         """
 
         self.check_average(np.array([10., 20., 0.]),
@@ -77,7 +81,7 @@ class DepthAverageTestCase(unittest.TestCase):
 
     def test_three_layers_case_3(self):
         """
-        Average: Case where the averaging depth is below the last layer
+        Case where the averaging depth is below the last layer
         """
 
         self.check_average(np.array([10., 20., 0.]),
@@ -87,7 +91,7 @@ class DepthAverageTestCase(unittest.TestCase):
 
     def test_three_layers_case_4(self):
         """
-        Average: Case where the averaging depth is at an interface
+        Case where the averaging depth is at an interface
         """
 
         self.check_average(np.array([10., 20., 0.]),
@@ -100,6 +104,10 @@ class DepthAverageTestCase(unittest.TestCase):
 # =============================================================================
 
 class TravelTimeAverageTestCase(unittest.TestCase):
+    """
+    Test for the calcualtion of the travel-time average
+    S-wave velocity
+    """
 
     def check_average(self,
                       thickness,
@@ -117,7 +125,7 @@ class TravelTimeAverageTestCase(unittest.TestCase):
 
     def test_one_layer(self):
         """
-        VSZ: Case with only one layer (homogenous half space)
+        Case with only one layer (homogenous half space)
         """
 
         self.check_average(np.array([0]),
@@ -127,7 +135,7 @@ class TravelTimeAverageTestCase(unittest.TestCase):
 
     def test_three_layer_vs30(self):
         """
-        VSZ: Case with three layers
+        Case with three layers
         """
 
         self.check_average(np.array([5., 10., 10., 20., 0.]),
@@ -140,6 +148,10 @@ class TravelTimeAverageTestCase(unittest.TestCase):
 # =============================================================================
 
 class SiteKappaTestCase(unittest.TestCase):
+    """
+    Test for the calculation of site kappa from a profile of
+    soil properties (Vs, Qs)
+    """
 
     def check_kappa0(self,
                      thickness,
@@ -159,7 +171,7 @@ class SiteKappaTestCase(unittest.TestCase):
 
     def test_one_layer(self):
         """
-        Kappa: Case with only one layer (homogenous half space)
+        Case with only one layer (homogenous half space)
         """
 
         self.check_kappa0(np.array([0]),
@@ -170,7 +182,7 @@ class SiteKappaTestCase(unittest.TestCase):
 
     def test_three_layers(self):
         """
-        Kappa: Case where the averaging depth is below the last layer
+        Case where the averaging depth is below the last layer
         """
 
         self.check_kappa0(np.array([10., 50., 0.]),
@@ -184,6 +196,9 @@ class SiteKappaTestCase(unittest.TestCase):
 # =============================================================================
 
 class QuarterWavelengthTestCase(unittest.TestCase):
+    """
+    Test for computing the quarter-wavelenght average parameters
+    """
 
     def check_qwl_velocity(self,
                            thickness,
@@ -204,7 +219,7 @@ class QuarterWavelengthTestCase(unittest.TestCase):
 
     def test_three_layers(self):
         """
-        QWL: Testing the frequency range 0.1-100Hz
+        Testing the frequency range 0.1-100Hz
         """
 
         expected_result = [[2.36000001e+03,

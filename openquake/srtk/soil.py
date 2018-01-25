@@ -230,30 +230,36 @@ def gt_soil_class(vs30, code='EC8'):
         default is EC8
 
     reuturn string gt_class:
-        Label of the getechnical soil class
+        Label of the geotechnical soil class
     """
 
     if code == 'EC8':
         if vs30 >= 800.:
             gt_class = 'A'
-        if vs30 >= 360. and vs30 < 800.:
+        elif vs30 >= 360. and vs30 < 800.:
             gt_class = 'B'
-        if vs30 >= 180. and vs30 < 360.:
+        elif vs30 >= 180. and vs30 < 360.:
             gt_class = 'C'
-        if vs30 < 180.:
+        elif vs30 < 180.:
             gt_class = 'D'
+        else:
+            gt_class = None
+            print 'Warning: no class assigned'
 
     # NEHRP (BSSC 1997)
     if code == 'NEHRP':
         if vs30 >= 1500.:
             gt_class = 'A'
-        if vs30 >= 760. and vs30 < 1500.:
+        elif vs30 >= 760. and vs30 < 1500.:
             gt_class = 'B'
-        if vs30 >= 360. and vs30 < 760.:
+        elif vs30 >= 360. and vs30 < 760.:
             gt_class = 'C'
-        if vs30 >= 180. and vs30 < 360.:
+        elif vs30 >= 180. and vs30 < 360.:
             gt_class = 'D'
-        if vs30 < 180.:
+        elif vs30 < 180.:
             gt_class = 'E'
+        else:
+            gt_class = None
+            print 'Warning: no class assigned'
 
     return gt_class

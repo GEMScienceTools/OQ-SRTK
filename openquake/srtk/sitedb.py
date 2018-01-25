@@ -196,6 +196,24 @@ class Model(object):
 
             f.close()
 
+    # -------------------------------------------------------------------------
+
+    def to_file(self, ascii_file, header=[], delimiter=','):
+        """
+        """
+
+        # Open input ascii file
+        try:
+            f = open(ascii_file, 'w')
+
+        except:
+            print('Error: Wrong file or file path')
+            return
+
+        else:
+            geo = _np.array([self.geo[k] for k in GEO_KEYS])
+            for layer in _np.transpose(geo):
+                print delimiter.join([str(l) for l in layer])
 
 # =============================================================================
 
