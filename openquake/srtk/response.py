@@ -30,6 +30,37 @@ import numpy as _np
 
 # =============================================================================
 
+def frequency_axis(fmin, fmax, fnum, log=True):
+    """
+    Compute a linear or logarithmic frequency axis
+
+    :param float fmin:
+        Minimum frequency
+
+    :param float fmax:
+        Maximum frequency
+
+    :param int fnum:
+        Number of frequencies
+
+    :param boolean log:
+        Switch between linear or logarithmic spacing
+        (default is logarithmic)
+
+    :return numpy.array freq:
+        The frequency axis
+    """
+
+    if log:
+        freq = _np.logspace(_np.log10(fmin), _np.log10(fmax), fnum)
+    else:
+        freq = _np.linspace(fmin, fmax, fnum)
+
+    return freq
+
+
+# =============================================================================
+
 def impedance_amplification(top_vs, top_dn, ref_vs=[], ref_dn=[], inc_ang=0.):
     """
     This function calculates the amplification due to a single seismic
@@ -86,6 +117,29 @@ def impedance_amplification(top_vs, top_dn, ref_vs=[], ref_dn=[], inc_ang=0.):
 
 # =============================================================================
 
+def attenuation_decay(freq, kappa):
+    """
+    Compute the frequency-dependent attenuation decay function
+    for a given site Kappa (0).
+
+    :param float or numpy.array freq:
+            array of frequencies in Hz for the calculation
+
+    :param float kappa:
+        site-specific attenutation operator (kappa0)
+
+    :return numpy.array att_func:
+        attenuation decay function (array)
+    """
+
+    # Computing attenuation function
+    att_fun = _np.exp(-_np.pi*kappa*freq)
+
+    return att_fun
+
+
+# =============================================================================
+
 def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0., depth=0.):
     """
     Compute the SH-wave transfer function using Knopoff formalism
@@ -125,7 +179,7 @@ def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0., depth=0.):
         (default is the free surface)
 
     :return numpy.array dis_mat:
-        matrix of displacements computed at each depth
+        matrix of displacements computed at each depth (complex)
     """
 
     # Precision of the complex type
@@ -202,7 +256,7 @@ def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0., depth=0.):
     inp_vec[-1] = 1.
 
     # Output layer's displacement matrix
-    dis_mat = _np.zeros((znum, fnum))
+    dis_mat = _np.zeros((znum, fnum), dtype=CTP)
 
     # -------------------------------------------------------------------------
     # Loop over frequencies
@@ -269,7 +323,7 @@ def sh_transfer_function(freq, hl, vs, dn, qs=None, inc_ang=0., depth=0.):
             dis_dsa = amp_vec[nl*2]*exp_dsa
             dis_usa = amp_vec[nl*2+1]*exp_usa
 
-            dis_mat[nz, nf] = _np.abs(dis_dsa + dis_usa)
+            dis_mat[nz, nf] = dis_dsa + dis_usa
 
     return dis_mat
 
@@ -295,3 +349,35 @@ def interface_depth(hl, dtype='float64'):
     depth = _np.array(depth, dtype=dtype)
 
     return depth
+
+
+# =============================================================================
+
+def resonance_frequency(freq, spec):
+    """
+    Identify resonance frequencies on an amplification spectrum.
+
+    :param float or numpy.array freq:
+        array of frequencies in Hz for the calculation
+
+    :param float or numpy.array spec:
+        the amplification spectrum
+
+    :return list resf:
+        list of tuples containg each a resonance frequency
+        and the corresponding amplitude
+    """
+
+    resf = []
+    spec = _np.abs(spec)
+
+    for nf in range(0, len(freq[:-2])):
+        # Three-points search for local maxima
+        a0 = spec[nf]
+        a1 = spec[nf+1]
+        a2 = spec[nf+2]
+
+        if (a1-a0) > 0 and (a2-a1) < 0:
+            resf.append((freq[nf+1], a1))
+
+    return resf

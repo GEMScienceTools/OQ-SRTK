@@ -25,13 +25,17 @@ import unittest
 import numpy as np
 import numpy.testing as npt
 
-from openquake.srtk.response.amplification import impedance_amplification
-from openquake.srtk.response.amplification import sh_transfer_function
+from openquake.srtk.response import impedance_amplification
+from openquake.srtk.response import sh_transfer_function
 
 
 # =============================================================================
 
 class ImpedanceAmplificationTestCase(unittest.TestCase):
+    """
+    Testing the Impedance Contrast (IC) method to
+    compute amplification
+    """
 
     def check_amplification(self,
                             top_vs,
@@ -47,7 +51,6 @@ class ImpedanceAmplificationTestCase(unittest.TestCase):
                                                   ref_vs,
                                                   ref_dn,
                                                   inc_angle)
-        print computed_result
 
         if not isinstance(computed_result, np.ndarray):
             self.assertAlmostEquals(computed_result,
@@ -61,21 +64,21 @@ class ImpedanceAmplificationTestCase(unittest.TestCase):
 
     def test_no_interface(self):
         """
-        testing a model with no seismic contrast
+        Case of a model with no seismic contrast
         """
 
         self.check_amplification(200., 1900., 200., 1900., 10., 1.)
 
     def test_one_interface_vertical(self):
         """
-        testing a model with a single seismic impedance contrast
+        Case of a model with a single seismic impedance contrast
         """
 
         self.check_amplification(200., 1900., 1500., 2500., 0., 3.14, 0.01)
 
     def test_one_interface_angle(self):
         """
-        testing a model with a single seismic impedance contrast
+        Case of a model with a single seismic impedance contrast
         and non-vertical incidence angle
         """
 
@@ -83,7 +86,7 @@ class ImpedanceAmplificationTestCase(unittest.TestCase):
 
     def test_multiple_interfaces_vertical(self):
         """
-        testing a model with an array of seismic impedance contrasts
+        Case of a model with an array of seismic impedance contrasts
         """
 
         self.check_amplification(np.array([200., 800., 2000.]),
@@ -99,6 +102,9 @@ class ImpedanceAmplificationTestCase(unittest.TestCase):
 
 class ShTansferFunctionTestCase(unittest.TestCase):
     """
+    Test for the calculation of the SH-wave transfer
+    function at arbitrary depth
+
     Results are verified against those obtained from the PSVQ code
     of F.J. Sanchez Sesma, modified by Roberto Paolucci
     """
@@ -119,7 +125,7 @@ class ShTansferFunctionTestCase(unittest.TestCase):
         disp = sh_transfer_function(freq, hl, vs, dn, qs, inc_ang, depth)
 
         npt.assert_almost_equal(ampf,
-                                disp[0]/2,
+                                np.abs(disp[0]/2),
                                 decimal=decimal)
 
     def read_psvq_file(self, input_file):
@@ -136,6 +142,9 @@ class ShTansferFunctionTestCase(unittest.TestCase):
         return freq, ampf
 
     def test_2_layer_model_free_surface(self):
+        """
+        Case with two layers
+        """
 
         self.check_amplification('data/psvq/2_layer_model/amp.i0.txt',
                                  np.array([100., 0.]),
@@ -146,6 +155,9 @@ class ShTansferFunctionTestCase(unittest.TestCase):
                                  0.)
 
     def test_2_layer_model_1st_interface(self):
+        """
+        Case with two layers and calculation at the 1st interface
+        """
 
         self.check_amplification('data/psvq/2_layer_model/amp.i1.txt',
                                  np.array([100., 0.]),
@@ -156,6 +168,9 @@ class ShTansferFunctionTestCase(unittest.TestCase):
                                  100.)
 
     def test_3_layer_model_free_surface(self):
+        """
+        Case with three layers
+        """
 
         self.check_amplification('data/psvq/3_layer_model/amp.i0.txt',
                                  np.array([10., 50., 0]),
@@ -166,6 +181,9 @@ class ShTansferFunctionTestCase(unittest.TestCase):
                                  0.)
 
     def test_3_layer_model_1st_interface(self):
+        """
+        Case with three layers and calculation at the 1st interface
+        """
 
         self.check_amplification('data/psvq/3_layer_model/amp.i1.txt',
                                  np.array([10., 50., 0]),
@@ -176,6 +194,9 @@ class ShTansferFunctionTestCase(unittest.TestCase):
                                  10.)
 
     def test_3_layer_model_2nd_interface(self):
+        """
+        Case with three layers and calculation at the 2st interface
+        """
 
         self.check_amplification('data/psvq/3_layer_model/amp.i2.txt',
                                  np.array([10., 50., 0]),

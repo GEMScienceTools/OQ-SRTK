@@ -24,12 +24,16 @@
 import unittest
 import numpy as np
 
-from openquake.srtk.soil import average
+from openquake.srtk import soil
 
 
 # =============================================================================
 
 class DepthAverageTestCase(unittest.TestCase):
+    """
+    Test for the calculation of the weighted average 
+    of an arbitrary soil property
+    """
 
     def check_average(self,
                       thickness,
@@ -38,9 +42,9 @@ class DepthAverageTestCase(unittest.TestCase):
                       expected_result,
                       tolerance=0.):
 
-        computed_result = average.depth_weighted_average(thickness,
-                                                         soil_param,
-                                                         depth)
+        computed_result = soil.depth_weighted_average(thickness,
+                                                      soil_param,
+                                                      depth)
         self.assertAlmostEqual(computed_result,
                                expected_result,
                                delta=tolerance)
@@ -100,6 +104,10 @@ class DepthAverageTestCase(unittest.TestCase):
 # =============================================================================
 
 class TravelTimeAverageTestCase(unittest.TestCase):
+    """
+    Test for the calcualtion of the travel-time average
+    S-wave velocity
+    """
 
     def check_average(self,
                       thickness,
@@ -108,9 +116,9 @@ class TravelTimeAverageTestCase(unittest.TestCase):
                       expected_result,
                       tolerance=0.):
 
-        computed_result = average.traveltime_average_velocity(thickness,
-                                                              s_velocity,
-                                                              depth)
+        computed_result = soil.traveltime_velocity(thickness,
+                                                   s_velocity,
+                                                   depth)
         self.assertAlmostEqual(computed_result,
                                expected_result,
                                delta=tolerance)
@@ -127,7 +135,7 @@ class TravelTimeAverageTestCase(unittest.TestCase):
 
     def test_three_layer_vs30(self):
         """
-        Case with only one layer (homogenous half space)
+        Case with three layers
         """
 
         self.check_average(np.array([5., 10., 10., 20., 0.]),
@@ -140,6 +148,10 @@ class TravelTimeAverageTestCase(unittest.TestCase):
 # =============================================================================
 
 class SiteKappaTestCase(unittest.TestCase):
+    """
+    Test for the calculation of site kappa from a profile of
+    soil properties (Vs, Qs)
+    """
 
     def check_kappa0(self,
                      thickness,
@@ -149,10 +161,10 @@ class SiteKappaTestCase(unittest.TestCase):
                      expected_result,
                      tolerance=0.):
 
-        kappa0 = average.compute_site_kappa(thickness,
-                                            s_velocity,
-                                            s_quality,
-                                            depth)
+        kappa0 = soil.compute_site_kappa(thickness,
+                                         s_velocity,
+                                         s_quality,
+                                         depth)
         self.assertAlmostEqual(kappa0,
                                expected_result,
                                delta=tolerance)
@@ -184,17 +196,22 @@ class SiteKappaTestCase(unittest.TestCase):
 # =============================================================================
 
 class QuarterWavelengthTestCase(unittest.TestCase):
+    """
+    Test for computing the quarter-wavelenght average parameters
+    """
 
     def check_qwl_velocity(self,
                            thickness,
                            s_velocity,
+                           density,
                            frequency,
                            expected_result,
                            tolerance=0.):
 
-        qwl_param = average.quarter_wavelength_velocity(thickness,
-                                                        s_velocity,
-                                                        frequency)
+        qwl_param = soil.quarter_wavelength_average(thickness,
+                                                    s_velocity,
+                                                    density,
+                                                    frequency)
 
         for np in [0, 1]:
             for qp, er in zip(qwl_param[np], expected_result[np]):
@@ -214,10 +231,16 @@ class QuarterWavelengthTestCase(unittest.TestCase):
                             720.00000115,
                             440.00000477,
                             100.,
-                            100.]]
+                            100.],
+                           [2097.03389831,
+                            2080.55555567,
+                            2036.36363759,
+                            1900.,
+                            1900.]]
 
         self.check_qwl_velocity(np.array([10., 50., 0.]),
                                 np.array([100., 500., 1000.]),
+                                np.array([1900., 2000., 2100.]),
                                 np.array([0.1, 0.5, 1., 10., 100.]),
                                 expected_result,
                                 tolerance=0.00001)

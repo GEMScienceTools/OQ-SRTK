@@ -69,7 +69,7 @@ def depth_weighted_average(thickness, soil_param, depth):
 
 # =============================================================================
 
-def traveltime_average_velocity(thickness, s_velocity, depth=30):
+def traveltime_velocity(thickness, s_velocity, depth=30):
     """
     The function calculates the travel-time average (harmonic mean)
     velocity at arbitrary depth (e.g. the widespread Vs30).
@@ -139,16 +139,19 @@ def compute_site_kappa(thickness, s_velocity, s_quality, depth=[]):
 
 # =============================================================================
 
-def quarter_wavelength_velocity(thickness, s_velocity, frequency):
+def quarter_wavelength_average(thickness, s_velocity, density, frequency):
     """
     This function solves the quarter-wavelength problem (Boore 2003)
-    and return the frequency-dependent average velocity.
+    and return the frequency-dependent average velocity and density
 
     :param numpy.array tickness:
         array of layer's thicknesses in meters (half-space is 0.)
 
     :param numpy.array s_velocity:
         array of layer's shear-wave velocities in m/s
+
+    :param numpy.array density:
+        array of layer's densities in kg/m3
 
     :param numpy.array frequency:
         array of frequencies in Hz for the calculation
@@ -158,13 +161,18 @@ def quarter_wavelength_velocity(thickness, s_velocity, frequency):
 
     :return numpy.array qwl_velocity:
         array of quarter-wavelength average velocities
+
+    :return numpy.array qwl_density:
+        array of quarter-wavelength average dencities
     """
 
     # Initialisation
     freq_num = len(frequency)
     slowness = 1./s_velocity
+
     qwl_depth = _np.zeros(freq_num)
     qwl_velocity = _np.zeros(freq_num)
+    qwl_density = _np.zeros(freq_num)
 
     for nf in range(freq_num):
 
@@ -182,7 +190,12 @@ def quarter_wavelength_velocity(thickness, s_velocity, frequency):
                                                      slowness,
                                                      qwl_depth[nf])
 
-    return qwl_depth, qwl_velocity
+        # Computing average soil property at the qwl-depth
+        qwl_density[nf] = depth_weighted_average(thickness,
+                                                 density,
+                                                 qwl_depth[nf])
+
+    return qwl_depth, qwl_velocity, qwl_density
 
 
 # =============================================================================
@@ -200,3 +213,53 @@ def _qwl_fit_func(search_depth, thickness, slowness, frequency):
     misfit = _np.abs(search_depth - (1./(4.*frequency*qwl_slowness)))
 
     return misfit
+
+
+# =============================================================================
+
+def gt_soil_class(vs30, code='EC8'):
+    """
+    Compute geotechnical soil class from a given vs30 according
+    to a specified building code.
+
+    :param float vs30:
+        The travel-time average over the first 30m
+
+    :param string code:
+        The reference building code for the classification;
+        default is EC8
+
+    reuturn string gt_class:
+        Label of the geotechnical soil class
+    """
+
+    if code == 'EC8':
+        if vs30 >= 800.:
+            gt_class = 'A'
+        elif vs30 >= 360. and vs30 < 800.:
+            gt_class = 'B'
+        elif vs30 >= 180. and vs30 < 360.:
+            gt_class = 'C'
+        elif vs30 < 180.:
+            gt_class = 'D'
+        else:
+            gt_class = None
+            print 'Warning: no class assigned'
+
+    # NEHRP (BSSC 1997)
+    if code == 'NEHRP':
+        if vs30 >= 1500.:
+            gt_class = 'A'
+        elif vs30 >= 760. and vs30 < 1500.:
+            gt_class = 'B'
+        elif vs30 >= 360. and vs30 < 760.:
+            gt_class = 'C'
+        elif vs30 >= 180. and vs30 < 360.:
+            gt_class = 'D'
+        elif vs30 < 180.:
+            gt_class = 'E'
+        else:
+            gt_class = None
+            print 'Warning: no class assigned'
+
+    return gt_class
